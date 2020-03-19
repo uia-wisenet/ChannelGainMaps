@@ -6,7 +6,7 @@
     % Ningbo University
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-function [y1]=sdp_ce(s,d,b,N,p1,a_)
+function [y1, eig_val_1and2_ratio]=sdp_ce(s,d,b,N,p1,a_)
  
     c_=[];
     C=[];
@@ -78,4 +78,6 @@ end
 [Y y1;y1.' 1]>=zeros(N+2,N+2); 
 
 cvx_end
+lambdas=eig(Y);
+eig_val_1and2_ratio=lambdas(end)/lambdas(end-1);
 end

@@ -667,6 +667,94 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             F = GFigure.captureCurrentFigure;
         end
         
+        % experiment for obtaining localization errors along with the rank of
+        % matrix Y using the robust SDR algorithm by Wang et al.
+        function F=experiment_303(obj,niter)
+            st = dbstack;
+            namestr = st.name;
+            simulationNumber =str2double(namestr(37:end));
+            results_filename = sprintf('./savedResults/dataTest%d.mat', simulationNumber);
+            if obj.b_loadData && exist(results_filename, 'file')
+                fprintf('%s found. This experiment has been run before but we are not checking the integrity of the saved files. Loading and plotting results...\n', results_filename);
+                load(sprintf('./savedResults/dataTest%d.mat', simulationNumber))
+            else
+                fprintf('%s not found or the flag for loading data is disabled. Running your experiment...\n', results_filename);
+                c = CartographySimulations;
+                c.f = 800e6;
+                c.pilotNoiseSTD =1e-5;
+                c.powerNoiseSTD  =0.5;
+                c.maxSamplesPerPilot=10;
+                c.receiverBandwidth = 20e6;
+                c.gridSize = [10 10];
+                c.numberOfSources=5;
+                
+                c.computeOnlyFeatures = true;
+                
+                selectedWalls=1:2;
+                
+                x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+                y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+                
+                c.n_runs = niter;% 10
+                
+                c.N_ue_pairs=1e2:1e2:2e3; % number of sensor pairs
+                
+                
+                c.simLocBased=true;  % false disables LocB cartography
+                c.testDiffSetOfFeatures=false;
+                c.PCAenabler=false;
+                c.considerMissingData=false;
+                
+                if  c.testDiffSetOfFeatures==true
+                    c.featureCell=c.featureCombinations(10,4); % generate all combinations of features
+                    c.N_feat_used=1:length(c.featureCell);
+                    c.N_feat =c.N_feat_used;
+                else
+                    c.N_feat_used=size(combnk(1:c.numberOfSources,2),1);
+                    c.N_feat=1;
+                end
+                if  c.PCAenabler==true
+                    c.N_feat =2:3; %  PCA dimension
+                elseif c.considerMissingData==true
+                    c.N_feat =-85:3:-41; % receiver sensitivy range in dBm
+                end
+                
+                c.inParallel =true;
+                combin_pairs=combnk(1:c.gridSize(1)*c.gridSize(2),2);
+                frac_train=0.6; % percentage of pairs to use for training
+                frac_val=0.4; % percentage of pairs to use for testing here
+                
+                c.kernelSigmaLF =100;
+                c.kernelSigmaLB =59;
+                c.lambdaLF=9.1844e-4;
+                c.lambdaLB=1.3e-3;
+                [allPointEstimatedLocation,eig_vals_ratios,~, evaluationGrid_x,evaluationGrid_y, ~, ~,~,...
+                    ~,~,~,~,~,~,~,...
+                    ~, ~,~,~,~]=c.run(selectedWalls,combin_pairs, frac_train,frac_val,...
+                    x_wall_file_name,y_wall_file_name,simulationNumber);
+                
+                save (sprintf('./savedResults/dataTest%d', simulationNumber))
+            end
+            allTrueLocations=[flipud(evaluationGrid_x(:)'); flipud(evaluationGrid_y(:)')];
+            start_point_plot=size(allTrueLocations, 2)+1;
+            allPointEstimatedLocation = allPointEstimatedLocation(:,:,2);
+            errors = vecnorm(allTrueLocations-allPointEstimatedLocation);
+            figure(2); 
+            subplot(2,1,1)
+            plot(errors, 'bd-','linewidth', 2); grid on
+            xlabel('Grid point index, $k$','Interpreter','latex')
+            ylabel('$\Vert \boldmath{x}_k- \hat{\boldmath{x}}_k\Vert $','Interpreter','latex')
+            title('Robust SDR')
+            subplot(2,1,2)
+            plot(eig_vals_ratios(start_point_plot:end), 'r*-.', 'linewidth', 2); grid on
+            xlabel('Grid point index, $k$','Interpreter','latex')
+            ylabel('$\frac{\lambda_1}{\lambda_2}$','Interpreter','latex')
+            title('Ratio of the 1st and 2nd eig. values')
+            min_ration=min(eig_vals_ratios(start_point_plot:end))
+            F = [];
+         
+        end
+        
         
     end
     

@@ -140,7 +140,7 @@ classdef CartographySimulations
         end
         %changed streetlimits from [0 300] to [0 75].
         
-        function [allPointEstimatedLocation,allLocFreeFeatures, evaluationGrid_x,evaluationGrid_y, source_loc, trueMap, estimatedPilotSignals,...
+        function [allPointEstimatedLocation,eig_vals_ratios,allLocFreeFeatures, evaluationGrid_x,evaluationGrid_y, source_loc, trueMap, estimatedPilotSignals,...
                 SqErr_AllRuns_locFree,SqErr_AllRuns_locBased, meanErrOnEvalFeat, locFreeEstimate,locBasedEstimate,UEFeatures,UELocationsPairs,...
                 averageMisses, NMSE_locFree,NMSE_locBased,UELocationsPairsTest, trueGains...
                 ] = run ...
@@ -175,7 +175,7 @@ classdef CartographySimulations
             mySim.locFreeEstimator.evalOption=obj.evalcoeffOption;
             
             mySim.locBasedEstimator = LocationBasedEstimator;
-            mySim.locEstimator = LocationEstimator;
+            mySim.locEstimator = WangLocationEstimator;
             mySim.locBasedEstimator.kernel = gaussianKernelLB;
             mySim.locBasedEstimator.regularizationParameter = obj.lambdaLB;
             mySim.locBasedEstimator.locationNoiseSTD = obj.locationNoiseSTD;
@@ -189,68 +189,10 @@ classdef CartographySimulations
             fprintf('Generating the true map based on the specified grid size \n')
             if obj.simLocBased==true
                 % old code:
-                % fprintf('Precomputing %s and %s \n', points_filename, points_filename2);
-                
-                %================= Added on 13 dec 2019(To assess the performance of two localization
-                %algortihms: the one in the LocF journal paper and the robust SDR by Wang 2016 )
-                start_time = tic;
-                errors = zeros(2, obj.gridSize(1)*obj.gridSize(2));
-                
-                [allPointEstimatedLocation,allLocFreeFeatures,allBsedFeatures, estimatedPilotSignals, trueMap,...
-                    source_loc, evaluationGrid_x, evaluationGrid_y] = mySim.precomputeEstimatedLocations(); %#ok<NASGU>
-                allPointEstimatedLocation = allPointEstimatedLocation(:,:,2);
-                allTrueLocationsPairs=[flipud(evaluationGrid_x(:)'); flipud(evaluationGrid_y(:)')];
-                errors(1,:) = vecnorm(allTrueLocationsPairs-allPointEstimatedLocation);
-                
-                %================= Start of Robust SDP
-                N = size(source_loc, 2);
-                p=15; % maximal NLOS value
-                n_points = size(evaluationGrid_x, 1)*size(evaluationGrid_x, 2);
-                allPointEstimatedLocation2 = zeros(size(allPointEstimatedLocation));
-                allBsedFeatures_sdr = allBsedFeatures(:, n_points+1:end);
-                for ind_loc = 1: n_points
-                    sigma=0.05;
-                    Q=0.5*sigma^2*(eye(N)+ones(N,N));
-                    NLOS_number = randi([3,N],1,1);  %randsrc(1,1,randperm(5))
-                    n=gauss_samples(zeros(N,1),Q,1); % get the noise
-                    w = [];
-                    for i=1:N% get the nlos bias for 8 links
-                        w(i)=unifrnd(0,p);
-                    end
-                    
-                    g_index=randperm(N,NLOS_number); % assign nlos bias to certain links
-                    g = zeros(N,1);
-                    g(g_index) = 1;
-                    
-                    
-                    %%%%%%%%%%%% SDP wang 2016 %%%%%%%%%%%%%%
-                    e=[];
-                    d=allBsedFeatures_sdr(:,ind_loc);
-                    b=[];
-                    for i=1:N-1%1:N;
-                        e(i,1)=g(i+1)*w(i+1)-g(1)*w(1);
-                        d(i)=d(i)+n(i)+e(i);
-                        b(i)=-d(i)^2-norm(source_loc(:,i+1))^2+norm(source_loc(:,1))^2;
-                    end
-                    
-                    a_=[];
-                    for i=1:N-1%2:N
-                        a_(:,i)=[2*(source_loc(:,1)-source_loc(:,i+1))',zeros(1,i-1),-2*d(i),zeros(1,N-i-1)].';
-                    end
-                    y0=sdp_ce(source_loc,d,b,N,p,a_);
-                    %================= End of Robust SDP
-                    allPointEstimatedLocation2(:,ind_loc)=y0(1:2);
-                end
-                errors(2,:) = vecnorm(allTrueLocationsPairs-allPointEstimatedLocation2);
-                figure(1); plot(errors(1,:), 'bd-'); hold on; plot(errors(2,:), 'r*--'); hold off; grid on
-                xlabel('Grid point index, $k$','Interpreter','latex')
-                ylabel('$\Vert \boldmath{x}_k- \hat{\boldmath{x}}_k\Vert $','Interpreter','latex')
-                legend('IRWSRD-LS','Robust SDR')
-                end_time = toc(start_time);
-                elapsed_time = end_time- start_time;
-                
-                return
-                %=================
+                % fprintf('Precomputing %s and %s \n', points_filename, points_filename2);             
+                [allPointEstimatedLocation,eig_vals_ratios,~, ~, ~,...
+                    ~, ~, ~] = mySim.precomputeEstimatedLocations(); %#ok<NASGU>
+           
                 [estimatedPilotSignals, trueMap, source_loc, evaluationGrid_x, evaluationGrid_y] = ...
                     mySim.generator.generateCGMap(mySim.generator.xt);
                 allLocFreeFeatures = []; %added this line just so I don't have to change the call to .simulate
@@ -285,10 +227,12 @@ classdef CartographySimulations
                 locFreeEstimate=0;
                 locBasedEstimate=0;
                 UEFeatures=0;
+                UELocationsPairsTest=0;
                 UELocationsPairs=0;
                 averageMisses=0;
                 NMSE_locFree=0;
                 NMSE_locBased=0;
+                trueGains=0;
                 return
             end
             

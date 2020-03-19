@@ -196,7 +196,7 @@ classdef Simulator
             
         end
         
-        function [allPointEstimatedLocation,allLocFreeFeatures,allLocBasedFeatures,...
+        function [allPointEstimatedLocation,eig_vals_ratios,allLocFreeFeatures,allLocBasedFeatures,...
                   estimatedPilotSignals, channel_out, source_loc, evaluationGrid_x, evaluationGrid_y...
                   ] = precomputeEstimatedLocations(obj)
             % Luismi: please write a (short) description of this method
@@ -227,7 +227,8 @@ classdef Simulator
                     allPointEstimatedLocation=obj.locBasedEstimator.estimateLocationFromDistances(allLocBasedFeatures);
                     allPointEstimatedLocation=reshape(allPointEstimatedLocation, [size(allPointEstimatedLocation,1) size(allPointEstimatedLocation,2)/2,2]);
                 else
-                    allPointEstimatedLocation=obj.locEstimator.estimateLocationIRWSRDLS(allLocBasedFeatures);
+%                     allPointEstimatedLocation=obj.locEstimator.estimateLocationIRWSRDLS(allLocBasedFeatures);
+                    [allPointEstimatedLocation, eig_vals_ratios]=obj.locEstimator.estimateLocationRobustSDR(allLocBasedFeatures);
                     allPointEstimatedLocation=reshape(allPointEstimatedLocation, [size(allPointEstimatedLocation,1) size(allPointEstimatedLocation,2)/2,2]);
                     %              allPointEstimatedLocation=allPointSampler.UELocations;
                 end
