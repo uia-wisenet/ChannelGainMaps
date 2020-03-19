@@ -685,7 +685,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                 c.powerNoiseSTD  =0.5;
                 c.maxSamplesPerPilot=10;
                 c.receiverBandwidth = 20e6;
-                c.gridSize = [10 10];
+                c.gridSize = [5 5];
                 c.numberOfSources=5;
                 
                 c.computeOnlyFeatures = true;

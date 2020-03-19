@@ -2,7 +2,7 @@ classdef WangLocationEstimator
     properties 
         
         Xenb % 2xN-matrix containing the source positions. The reference source is in column 1.
-        rho=0 % rho: upper bound on the NLOS bias
+        rho=15 % rho: upper bound on the NLOS bias
        
         
     end
