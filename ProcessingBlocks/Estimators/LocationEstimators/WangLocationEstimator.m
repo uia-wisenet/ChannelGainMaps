@@ -3,7 +3,7 @@ classdef WangLocationEstimator
         
     end
     methods
-        function[x_out, v_r_out] = solve_robust_loc(obj, ...
+        function[x_out, v_r_out, value_out] = solve_robust_loc(obj, ...
                 v_d, m_s, rho)
             % Solves the SDP Relaxation of the Robust Location Estimation
             % by Wang et al.
@@ -26,7 +26,7 @@ classdef WangLocationEstimator
                           -2*v_d(i);
                           zeros(N-i-1,1)   ];
             end
-            y = sdp_ce(m_s, v_d, b, N, rho, a_);
+            [y, value_out] = sdp_ce(m_s, v_d, b, N, rho, a_);
             x_out = y(1:2);
             v_r_out = y(3:end);
         end
