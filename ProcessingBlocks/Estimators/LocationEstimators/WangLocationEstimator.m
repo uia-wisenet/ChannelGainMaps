@@ -8,7 +8,7 @@ classdef WangLocationEstimator
             % Solves the SDP Relaxation of the Robust Location Estimation
             % by Wang et al.
             % Inputs:
-            % v_d: (N-1)-vector (N=number of sources) containing the
+            % v_d: (N-1)- a vector (N=number of sources) containing the
             %      measured TDOAs (assumed corrupted with small Gaussian 
             %      noise and big NLOS bias)
             % m_s: 2xN-matrix containing the source positions. The
