@@ -257,14 +257,14 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
                 contour(range1, range2, m_value, contour_levels)
-                c_legend{3} = 'objective function'
+                c_legend{3} = 'objective function';
                 title 'worst case, some NLOS range meas.'
                 legend(c_legend);
             subplot(1, 2, 2)
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
                 contour(range1, range2, m_value_LOS, contour_levels)
-                c_legend{3} = 'objective function'
+                c_legend{3} = 'objective function';
                 title 'worst case, LOS-free range meas.'
                 legend(c_legend);
             F = GFigure.captureCurrentFigure;
