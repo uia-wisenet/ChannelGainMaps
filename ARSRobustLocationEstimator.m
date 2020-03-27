@@ -5,6 +5,21 @@ properties
 end
 
 methods
+    
+    function [v_x_hat, v_r_out, value, m_valueMap, uncertainty_measure...
+            ] = solveGridSearch(obj, v_d_in, m_s, m_grid_x1, m_grid_x2)
+        % Solve the convex relaxation of the problem of minimizing the
+        % cost function implemented by the method computeValue
+        m_valueMap = obj.valueMap(m_grid_x1, m_grid_x2, v_d_in, m_s);
+        [value, idx] = min(m_valueMap(:));           
+        v_x_hat = [m_grid_x1(idx); m_grid_x2(idx)];
+        v_r_out = norms(v_x_hat - m_s);
+        uncertainty_measure = nan;
+        if nargout ==5
+            warning('Uncertainty measure not implemented yet.')
+        end
+        
+    end
     function [value, v_r] = computeValue(obj, v_x, v_d_in, m_s)
         % Given a point in space, range difference measurements, and
         % source positions, computes the objective value
@@ -54,8 +69,8 @@ methods
     
     function [v_x_hat, v_r_out, value] = solveRelaxed(obj, ...
                 v_d_in, m_s)
-        % Solve the convex relaxation of minimizing the cost function 
-        % implemented by the method computeValue
+        % Solve the convex relaxation of the problem of minimizing the 
+        % cost function implemented by the method computeValue
             
         N = size(m_s, 2);
         rho = obj.param_rho;

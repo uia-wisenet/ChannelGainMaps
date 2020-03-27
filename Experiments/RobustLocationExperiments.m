@@ -424,30 +424,35 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                 arle.solveRelaxed(v_d_LOS, m_s); 
             time_relaxed = toc
             % create value map
-            if isempty(n_coord_grid)
+            if isempty(n_coord_grid) % if the numer of grid points was not
+                % passed as an input argument, take it from the property
                 n_coord_grid = obj.n_corod_grid_default;
             end
             m_points = [m_s v_x_true];
             tic
-            range1 = obj.exagg_linspace(min(m_points(1,:)), ...
+            v_range1 = obj.exagg_linspace(min(m_points(1,:)), ...
                 max(m_points(1,:)),  0, 1, n_coord_grid);
-            range2 = obj.exagg_linspace(min(m_points(2,:)), ...
+            v_range2 = obj.exagg_linspace(min(m_points(2,:)), ...
                 max(m_points(2,:)), 0, 1, n_coord_grid);
-            [m_grid_x1, m_grid_x2] = meshgrid(range1, range2);
+            [m_grid_x1, m_grid_x2] = meshgrid(v_range1, v_range2);
             disp 'calculating value map...'
-            m_value =     arle.valueMap( m_grid_x1, m_grid_x2, ...
-                v_d,     m_s); 
-            m_value_LOS = arle.valueMap( m_grid_x1, m_grid_x2, ...
-                v_d_LOS, m_s); 
-            [value_gs, idx]    = min(m_value(:));           
-            v_x_hat_gs = [m_grid_x1(idx); m_grid_x2(idx)];
-            [value_gs_LOS, idx] =  min(m_value_LOS(:));
-            v_x_hat_gs_LOS = [m_grid_x1(idx); m_grid_x2(idx)];
+%             m_valueMap =     arle.valueMap( m_grid_x1, m_grid_x2, ...
+%                 v_d,     m_s); 
+%             m_valueMap_LOS = arle.valueMap( m_grid_x1, m_grid_x2, ...
+%                 v_d_LOS, m_s); 
+%             [value_gs, idx]    = min(m_valueMap(:));           
+%             v_x_hat_gs = [m_grid_x1(idx); m_grid_x2(idx)];
+%             [value_gs_LOS, idx] =  min(m_valueMap_LOS(:));
+%             v_x_hat_gs_LOS = [m_grid_x1(idx); m_grid_x2(idx)];
+            [v_x_hat_gs, ~, value_gs, m_valueMap] = ...
+                arle.solveGridSearch(v_d, m_s, m_grid_x1, m_grid_x2);
+            [v_x_hat_gs_LOS, ~, value_gs_LOS, m_valueMap_LOS] = ...
+                arle.solveGridSearch(v_d_LOS, m_s, m_grid_x1, m_grid_x2);
             time_gridSearch = toc
             %
             factor = 5000;
-            unnormalized_pdf = exp((value_gs-m_value)/factor);
-            unnormalized_pdf_LOS = exp((value_gs_LOS-m_value_LOS)/factor);
+            unnormalized_pdf = exp((value_gs-m_valueMap)/factor);
+            unnormalized_pdf_LOS = exp((value_gs_LOS-m_valueMap_LOS)/factor);
             normalized_pdf     = ...
                 unnormalized_pdf./sum(unnormalized_pdf(:));
             normalized_pdf_LOS = ...
@@ -479,7 +484,7 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             subplot(1, 2, 1)
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
-                contour(range1, range2, normalized_pdf, contour_levels)
+                contour(v_range1, v_range2, normalized_pdf, contour_levels)
                 c_legend{3} = 'objective function';
                 obj.plot_estimates(v_x_hat, obj.ch_altEstimate)
                 c_legend{4} = 'Relaxed ARS';
@@ -490,7 +495,7 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             subplot(1, 2, 2)
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
-                contour(range1, range2, normalized_pdf_LOS, contour_levels_LOS)
+                contour(v_range1, v_range2, normalized_pdf_LOS, contour_levels_LOS)
                 c_legend{3} = 'objective function';
                 obj.plot_estimates(v_x_hat_LOS, obj.ch_altEstimate)
                 c_legend{4} = 'Relaxed ARS';
@@ -502,9 +507,9 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             
             figure(998); clf
             ax (1) = subplot(1, 2, 1);
-                mesh(m_grid_x1, m_grid_x2, m_value);
+                mesh(m_grid_x1, m_grid_x2, m_valueMap);
             ax (2) = subplot(1, 2, 2);
-                mesh(m_grid_x1, m_grid_x2, m_value_LOS);
+                mesh(m_grid_x1, m_grid_x2, m_valueMap_LOS);
                 % stem3(v_x_hat(1),    v_x_hat(2),    value_mrle, '^m');
                 % stem3(v_x_wang(1),   v_x_wang(2),   value_wang, 'vr')
                 % stem3(v_x_grid_s(1), v_x_grid_s(2), value_gridsearch, 'sm')
