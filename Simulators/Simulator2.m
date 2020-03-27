@@ -4,7 +4,7 @@ classdef Simulator2
         locFreeEstimator LocationFreeEstimator
         locBasedEstimator LocationBasedEstimator
         hybridEstimator HybridEstimator
-        locEstimator LocationEstimator
+        locEstimator WangLocationEstimator
         featureExtractor
         sampler
     end
@@ -62,6 +62,7 @@ classdef Simulator2
             channelForPairsTr=zeros(1,N_pair_train);
             n_sp_CoM  = size(t_allLocFreeFeatures,  1); % no. of source pairs
             n_sp_TDoA = size(t_allLocBasedFeatures, 1);
+            trueLoc_train  = zeros([2, size(m_train_pairs)]);
             locFreeFeatures_train  = zeros([n_sp_CoM, size(m_train_pairs)]);
             locBasedFeatures_train = zeros([n_sp_TDoA, size(m_train_pairs)]);
             
@@ -79,9 +80,12 @@ classdef Simulator2
                     t_allLocFreeFeatures(:, [ind_tx ind_rx]);
                 locBasedFeatures_train(:, ind_pair, :) = ...
                     t_allLocBasedFeatures(:, [ind_tx ind_rx]);
+                trueLoc_train(:, ind_pair, 1) = xy_transmitter';
+                trueLoc_train(:, ind_pair, 2) = xy_receiver';
                 ltc.go(ind_pair);
             end
-            channelForPairs_tracemap = zeros(1, N_pair_tracemap);    
+            channelForPairs_tracemap = zeros(1, N_pair_tracemap); 
+            trueLoc_tracemap  = zeros([2, size(m_tracemap_pairs)]);
             locFreeFeat_tracemap  = zeros([n_sp_CoM, size(m_tracemap_pairs)]);
             locBasedFeat_tracemap = zeros([n_sp_TDoA, size(m_tracemap_pairs)]);
             disp('Computing channel gains (for map tracing)...')
@@ -98,6 +102,8 @@ classdef Simulator2
                     t_allLocFreeFeatures(:, [ind_tx ind_rx]);
                 locBasedFeat_tracemap(:, ind_pair, :) = ...
                     t_allLocBasedFeatures(:, [ind_tx ind_rx]);
+                trueLoc_tracemap(:, ind_pair, 1) = xy_transmitter';
+                trueLoc_tracemap(:, ind_pair, 2) = xy_receiver';
                 ltc.go(ind_pair);
             end
                      
@@ -119,32 +125,33 @@ classdef Simulator2
             disp ('Training LocBased...')
             my_locBasedTrainer = LocBasedTrainer;
             my_locBasedTrainer.estimator = obj.locBasedEstimator;
-            estim_loc_tx =obj.locEstimator.estimateLocationIRWSRDLS(...
+            estim_loc_tx = obj.locEstimator.estimateLocationRobustSDR(...
                 locBasedFeatures_train(:,:,1)); %estimated locations
-            estim_loc_rx = obj.locEstimator.estimateLocationIRWSRDLS(...
+            estim_loc_rx = obj.locEstimator.estimateLocationRobustSDR(...
                 locBasedFeatures_train(:,:,2));
             estim_loc_train = cat(3, estim_loc_tx, estim_loc_rx);
             locBasedFKM = my_locBasedTrainer.train(...
                 estim_loc_train,channelForPairsTr);
             
             disp('Evaluating LocBased at validation set...')
-            estim_loc_tm_tx = obj.locEstimator.estimateLocationIRWSRDLS(...
+            estim_loc_tm_tx = obj.locEstimator.estimateLocationRobustSDR(...
                 locBasedFeat_tracemap(:,:,1)); %estimated loc (tracemap)
-            estim_loc_tm_rx = obj.locEstimator.estimateLocationIRWSRDLS(...
+            estim_loc_tm_rx = obj.locEstimator.estimateLocationRobustSDR(...
                 locBasedFeat_tracemap(:,:,2));
             estim_loc_tracemap = cat(3, estim_loc_tm_tx, estim_loc_tm_rx);
             locBasedMapEstimate = locBasedFKM.evaluate(estim_loc_tracemap);
             
-             disp ('Training Hybrid...')
-            my_hybridTrainer = HybridTrainer;
-            my_hybridTrainer.estimator = obj.hybridEstimator;
-            %TODO: reshape?
-            hybridFKM = my_hybridTrainer.train(...
-                locFreeFeatures_train, estim_loc_train, channelForPairsTr);
-            disp('Evaluating Hybrid at validation set...')
-            hybridMapEstimate = hybridFKM.evaluate(...
-                locFreeFeat_tracemap, estim_loc_tracemap);
-            disp('Done');
+%              disp ('Training Hybrid...')
+%             my_hybridTrainer = HybridTrainer;
+%             my_hybridTrainer.estimator = obj.hybridEstimator;
+%             %TODO: reshape?
+%             locErrors = vecnorm(trueLoc_train - estim_loc_train);
+%             hybridFKM = my_hybridTrainer.train(...
+%                 locFreeFeatures_train, estim_loc_train, locErrors, channelForPairsTr);
+%             disp('Evaluating Hybrid at validation set...')
+%             hybridMapEstimate = hybridFKM.evaluate(...
+%                 locFreeFeat_tracemap, estim_loc_tracemap);
+%             disp('Done');
 
             %% compute error measures
             SqErr_locFree = Simulator.compute_SqErr(...
@@ -155,10 +162,12 @@ classdef Simulator2
                 channelForPairs_tracemap, locBasedMapEstimate);
             NMSE_locBased = SqErr_locBased/sum((channelForPairs_tracemap...
                 -mean(channelForPairs_tracemap)).^2);
-            SqErr_hybrid = Simulator.compute_SqErr(...
-                channelForPairs_tracemap, hybridMapEstimate);
-            NMSE_hybrid = SqErr_hybrid/sum((channelForPairs_tracemap...
-                -mean(channelForPairs_tracemap)).^2);
+%             SqErr_hybrid = Simulator.compute_SqErr(...
+%                 channelForPairs_tracemap, hybridMapEstimate);
+%             NMSE_hybrid = SqErr_hybrid/sum((channelForPairs_tracemap...
+%                 -mean(channelForPairs_tracemap)).^2);
+            hybridMapEstimate = 0;
+            NMSE_hybrid =0;
         end
     end
 end

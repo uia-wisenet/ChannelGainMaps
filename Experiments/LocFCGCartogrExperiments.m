@@ -553,7 +553,8 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             F = GFigure.captureCurrentFigure;
         end
         
-        % experiment using simulator2 class and hybrid simulator
+        % experiment using simulator2 class and hybrid simulator for
+        % visualizing channel gains 
         function F = experiment_302(obj, niter)
             % simulation using the simplified simulator class (Simulator2)
             % Same inputs as exp 203
@@ -562,15 +563,15 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             
             x_wall_file_name='./modelFiles/x_coord_4walls.mat';
             y_wall_file_name='./modelFiles/y_coord_4walls.mat';
-            selectedWalls=1:2;
+            selectedWalls=[2 3];
             
             kernelSigmaLF = 69;
-            kernelSigmaLB=50;
+            kernelSigmaLB=43;
             lambdaLF = 1e-5;
-            lambdaLB =6e-4;
+            lambdaLB =6e-3;
         
             gridSize = [20 20];
-            N_pair_train = 500; %
+            N_pair_train = 100; %
             
             c = CartographySimulations; % we should be able to remove
             % this object from here
@@ -600,7 +601,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             mySim.locFreeEstimator.enableMissingData = 0;
             
             mySim.locBasedEstimator = LocationBasedEstimator;
-            mySim.locEstimator = LocationEstimator;
+            mySim.locEstimator = WangLocationEstimator;
             mySim.locBasedEstimator.kernel = @(x, y) ...
                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
             mySim.locBasedEstimator.regularizationParameter = lambdaLB;
@@ -610,8 +611,8 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             mySim.locEstimator.Xenb = source_loc;
             
             mySim.hybridEstimator = HybridEstimator;
-            mySim.hybridEstimator.kernelLF = mySim.locFreeEstimator.kernel;
-            mySim.hybridEstimator.kernelLB = mySim.locBasedEstimator.kernel;
+            mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+            mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
             mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
             
@@ -630,7 +631,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             %TODO: problem here = m_train_pairs should be Nx2, but it is Nx1
             
             % defining a trajectory
-            column_begin= 8;
+            column_begin= 1;
             rowskip = 2;
             Ntraj = ceil(gridSize(2)./rowskip)-1;
             final_index = column_begin+rowskip*Ntraj*gridSize(2);
@@ -646,8 +647,8 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             
             %%
             disp 'Running only one experiment (no monte carlo yet)'
-            [NMSE_locFree, NMSE_locBased,NMSE_hybrid, locFreeMapEstimate,...
-                locBasedMapEstimate, hybridMapEstimate,...
+            [NMSE_locFree, NMSE_locBased,~, locFreeMapEstimate,...
+                locBasedMapEstimate, ~,...
                 trueGains] = mySim.simulate(...
                 m_train_pairs, m_tracemap_pairs, m_grid_x, m_grid_y);
             
@@ -657,13 +658,14 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                 gridSize(1), gridSize(2), 'locFree' );
             M_locBased = create_animation2([m_tracemap_pairs locBasedMapEstimate' ],...
                 gridSize(1), gridSize(2), 'locBased' );
-            M_hybrid = create_animation2([m_tracemap_pairs hybridMapEstimate' ],...
-                gridSize(1), gridSize(2), 'hybrid' );
-            
+%             M_hybrid = create_animation2([m_tracemap_pairs hybridMapEstimate' ],...
+%                 gridSize(1), gridSize(2), 'hybrid' );             
             M = create_animation3([m_tracemap_pairs trueGains' locFreeMapEstimate' ...
-                locBasedMapEstimate' hybridMapEstimate'], gridSize(1), gridSize(2), ...
-                {'True', 'LocFree', 'LocBased', 'hybrid'}, 's40x40')
-            
+                locBasedMapEstimate' ], gridSize(1), gridSize(2), ...
+                {'True', 'LocFree', 'LocBased'}, 's40x40') %hybridMapEstimate'  , 'hybrid'
+            NMSE_locFree
+            NMSE_locBased
+%             NMSE_hybrid
             F = GFigure.captureCurrentFigure;
         end
         
@@ -755,7 +757,60 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
          
         end
         
+        % plot histograms of the difference between range diff and
+        % LocBasedFeatures
+        function F = experiment_304(obj, niter)
+            % simulation using the simplified simulator class (Simulator2)
+            % Same inputs as exp 203
+            
+            rng(1)
+            
+            x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+            y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+            selectedWalls=2:3;
+           
+            gridSize = [20 20];
+            
+            c = CartographySimulations; % we should be able to remove
+            % this object from here
+            c.f = 800e6;
+            c.gridSize = gridSize;
+            c.receiverBandwidth = 20e6;
+            
+            myBiasErrorSim = BiasErrorSimulator;
+            [myBiasErrorSim.generator, source_loc] = c.baselineGenerator(...
+                selectedWalls, x_wall_file_name, y_wall_file_name);
+            myBiasErrorSim.generator.maxSamplesPerPilot = 10;
+            
+            % myBiasErrorSim.features = 1:size(combnk(1:numberOfSources,2),1);
+            % we could move .baselineGenerator to the Simulator[2] class
+            myBiasErrorSim.sampler = SpectrumMapSampler;
+            myBiasErrorSim.sampler.pilotNoiseSTD = 0e-5;
+            myBiasErrorSim.sampler.powerNoiseSTD = 0.5;
+            myBiasErrorSim.sampler.maxSamplesPerPilot=10;
+            %myBiasErrorSim.PCAenable=obj.PCAenabler;
+            myBiasErrorSim.featureExtractor = FeatureExtractor;
+            myBiasErrorSim.featureExtractor.sampling_period = myBiasErrorSim.generator.sampling_period;
         
+            myBiasErrorSim.locEstimator = WangLocationEstimator;
+            
+            myBiasErrorSim.locEstimator.Xenb = source_loc;
+      
+            % define grid:
+            [m_grid_x, m_grid_y] = ndgrid(...
+                linspace(myBiasErrorSim.generator.x2,          myBiasErrorSim.generator.x1,           myBiasErrorSim.generator.n_gridpoints_x), ...
+                linspace(myBiasErrorSim.generator.y_limits(1), myBiasErrorSim.generator.y_limits(2),  myBiasErrorSim.generator.n_gridpoints_y));
+           
+            disp 'Running only one experiment (no monte carlo yet)'
+            [featDiff, ~] = myBiasErrorSim.simulate(m_grid_x, m_grid_y);
+            
+            % Plot the histogram of the feature difference
+            close all
+            nbins = 100;
+            hist(vec(featDiff), nbins)
+            F = []; % GFigure.captureCurrentFigure;
+        end
+           
     end
     
     

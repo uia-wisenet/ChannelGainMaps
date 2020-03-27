@@ -6,10 +6,12 @@ classdef HybridTrainer
     end
     
     methods
-        function fkm_out = train(obj, m_features_LF, m_features_LB, v_c2m_metric)
+        function fkm_out = train(obj, m_features_LF, m_features_LB,...
+                local_errors, v_c2m_metric)
             
             [hybridCoefficients,~, sig_ens] ...
-                = obj.estimator.train(m_features_LF, m_features_LB, v_c2m_metric);
+                = obj.estimator.train(m_features_LF, m_features_LB,...
+                local_errors, v_c2m_metric);
             
             fkm_out = ForwardHybridKernelMachine;
             fkm_out.estimator = obj.estimator;

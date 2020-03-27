@@ -13,7 +13,7 @@ classdef FeatureExtractor
         function  estimatedCentersOfMass  = locFreeExtract(obj,pilotSignals)
             % this function extracts the LocF features from pilot signals.
             % Accepts input pilotSignals of size S-by-K-by-N where S is the
-            % number of sources (or anchor nodes), K is the number of samples 
+            % number of sources (or anchor nodes), K is the number of samples
             % per signal, and N is the number of sensor locations.
             % Outputs a matrix of size M-by-N where M is the number of
             % LocF features extracted at one sensor location.
@@ -37,9 +37,9 @@ classdef FeatureExtractor
         
         
         function estimatedDistances2 = locBasedExtract(obj,pilotSignals)
-           % this function extracts the LocB features from pilot signals.
+            % this function extracts the LocB features from pilot signals.
             % Accepts input pilotSignals of size S-by-K-by-N where S is the
-            % number of sources (or anchor nodes), K is the number of samples 
+            % number of sources (or anchor nodes), K is the number of samples
             % per signal, and N is the number of sensor locations.
             % Outputs a matrix of size M-by-N where M is the number of
             % LocB features extracted at one sensor location.
@@ -57,6 +57,24 @@ classdef FeatureExtractor
                 estimatedDistances2(:,ind_ue)=averaDistAllSources;
             end
             
+        end
+        
+        function distancesDiff = obtainRangeDiffer(obj,source_locs, sensor_locs)
+            % this function obtains range differences from source and sensor locations.
+            % Accepts inputs: (1) source locations of size 2-by-S where S is the
+            % number of sources (or anchor nodes), (2) sensor locations of size 2-by-N
+            % where N is the number of sensor locations.
+            % Outputs a matrix of size M-by-N where M=S-1 is the number of
+            % range differences at one sensor location.
+            n_ues=size(sensor_locs,2);
+            n_sources=size(source_locs,2);
+            distancesDiff=zeros(n_sources-1,n_ues);
+            for ind_ue=1:n_ues
+                 distancesDiff(:,ind_ue) = vecnorm(sensor_locs(:,ind_ue)-...
+                     source_locs(:, 2:end))-vecnorm(sensor_locs(:,ind_ue)-...
+                     source_locs(:, 1));
+               
+            end    
         end
     end
     
