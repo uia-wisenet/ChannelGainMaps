@@ -18,8 +18,8 @@ methods
         if nargout ==5
             warning('Uncertainty measure not implemented yet.')
         end
-        
     end
+    
     function [value, v_r] = computeValue(obj, v_x, v_d_in, m_s)
         % Given a point in space, range difference measurements, and
         % source positions, computes the objective value
