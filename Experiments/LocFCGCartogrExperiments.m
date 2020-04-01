@@ -566,9 +566,9 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             selectedWalls=[2 3];
             
             kernelSigmaLF = 69;
-            kernelSigmaLB=43;
+            kernelSigmaLB=35;
             lambdaLF = 1e-5;
-            lambdaLB =6e-3;
+            lambdaLB =8e-3;
         
             gridSize = [20 20];
             N_pair_train = 100; %
