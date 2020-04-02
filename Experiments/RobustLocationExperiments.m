@@ -266,7 +266,7 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                 c_legend{2} = obj.plot_sensor(v_x_true);
                 contour(range1, range2, m_value_LOS, contour_levels)
                 c_legend{3} = 'objective function';
-                title 'worst case, LOS-free range meas.'
+                title 'worst case,NLOS-free range meas.'
                 legend(c_legend);
             F = GFigure.captureCurrentFigure;
                
@@ -363,7 +363,7 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                 c_legend{2} = obj.plot_sensor(v_x_true);
                 contour(range1, range2, normalized_pdf_LOS, contour_levels_LOS)
                 c_legend{3} = 'objective function';
-                title 'worst case, LOS-free range meas.'
+                title 'worst case,NLOS-free range meas.'
                 legend(c_legend);
             F = GFigure.captureCurrentFigure;
             
@@ -475,17 +475,17 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             plot(v_confidenceLevels_LOS, v_pdfLevels);
             
             v_standardConfidenceLevels = linspace(0.6, 0.8, 5);
-            contour_levels = interp1(v_confidenceLevels, v_pdfLevels, ...
+            contour_levels_pdf = interp1(v_confidenceLevels, v_pdfLevels, ...
                 v_standardConfidenceLevels);
-            contour_levels_LOS = interp1(v_confidenceLevels_LOS, v_pdfLevels, ...
+            contour_levels_pdf_LOS = interp1(v_confidenceLevels_LOS, v_pdfLevels, ...
                 v_standardConfidenceLevels);
                 
-            figure(997); clf         
+            figure(995); clf         
             subplot(1, 2, 1)
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
-                contour(v_range1, v_range2, normalized_pdf, contour_levels)
-                c_legend{3} = 'objective function';
+                contour(v_range1, v_range2, normalized_pdf , contour_levels_pdf)
+                c_legend{3} ='interpreted PDF';
                 obj.plot_estimates(v_x_hat, obj.ch_altEstimate)
                 c_legend{4} = 'Relaxed ARS';
                 obj.plot_estimates(v_x_hat_gs, obj.ch_gsEstimate)
@@ -495,13 +495,14 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             subplot(1, 2, 2)
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
-                contour(v_range1, v_range2, normalized_pdf_LOS, contour_levels_LOS)
-                c_legend{3} = 'objective function';
+                contour(v_range1, v_range2, normalized_pdf_LOS, ...
+                    contour_levels_pdf_LOS)
+                c_legend{3} = 'interpreted PDF';
                 obj.plot_estimates(v_x_hat_LOS, obj.ch_altEstimate)
                 c_legend{4} = 'Relaxed ARS';
                 obj.plot_estimates(v_x_hat_gs_LOS, obj.ch_gsEstimate)
                 c_legend{5} = 'ARS, grid search';
-                title 'worst case, LOS-free range meas.'
+                title 'worst case, NLOS-free range meas.'
                 legend(c_legend);
             F = GFigure.captureCurrentFigure;
             
