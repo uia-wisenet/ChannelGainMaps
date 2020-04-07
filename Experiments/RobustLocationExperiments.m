@@ -436,10 +436,10 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                 max(m_points(2,:)), 0, 1, n_coord_grid);
             [m_grid_x1, m_grid_x2] = meshgrid(v_range1, v_range2);
             disp 'calculating value map...'
-%             m_valueMap =     arle.valueMap( m_grid_x1, m_grid_x2, ...
-%                 v_d,     m_s); 
-%             m_valueMap_LOS = arle.valueMap( m_grid_x1, m_grid_x2, ...
-%                 v_d_LOS, m_s); 
+%             m_valueMap =     arle.valueMap(v_d, m_s, ...
+%                    m_grid_x1, m_grid_x2); 
+%             m_valueMap_LOS = arle.valueMap(v_d_LOS, m_s, ...
+%                    m_grid_x1, m_grid_x2); 
 %             [value_gs, idx]    = min(m_valueMap(:));           
 %             v_x_hat_gs = [m_grid_x1(idx); m_grid_x2(idx)];
 %             [value_gs_LOS, idx] =  min(m_valueMap_LOS(:));
@@ -484,7 +484,7 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             subplot(1, 2, 1)
                 c_legend{1} = obj.plot_sources(m_s); hold on
                 c_legend{2} = obj.plot_sensor(v_x_true);
-                contour(v_range1, v_range2, normalized_pdf , contour_levels_pdf)
+                contour(v_range1, v_range2, normalized_pdf, contour_levels_pdf)
                 c_legend{3} ='interpreted PDF';
                 obj.plot_estimates(v_x_hat, obj.ch_altEstimate)
                 c_legend{4} = 'Relaxed ARS';
@@ -506,31 +506,85 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                 legend(c_legend);
             F = GFigure.captureCurrentFigure;
             
-            figure(998); clf
-            ax (1) = subplot(1, 2, 1);
-                mesh(m_grid_x1, m_grid_x2, m_valueMap);
-            ax (2) = subplot(1, 2, 2);
-                mesh(m_grid_x1, m_grid_x2, m_valueMap_LOS);
-                % stem3(v_x_hat(1),    v_x_hat(2),    value_mrle, '^m');
-                % stem3(v_x_wang(1),   v_x_wang(2),   value_wang, 'vr')
-                % stem3(v_x_grid_s(1), v_x_grid_s(2), value_gridsearch, 'sm')
-            linkprop(ax, {'CameraUpVector', 'CameraPosition', ...
-                'CameraTarget', 'XLim', 'YLim', 'ZLim'})
-            F(2) = GFigure.captureCurrentFigure;
-               
-            figure(999); clf
-            ax (1) = subplot(1, 2, 1);
-                mesh(m_grid_x1, m_grid_x2, unnormalized_pdf);
-            ax (2) = subplot(1, 2, 2);
-                mesh(m_grid_x1, m_grid_x2, unnormalized_pdf_LOS);
-            linkprop(ax, {'CameraUpVector', 'CameraPosition', ...
-                'CameraTarget', 'XLim', 'YLim', 'ZLim'})
-            F(3) = GFigure.captureCurrentFigure;  
+            level_offsets = linspace(0.01, 1, 100)*value_gs;
+            [v_diam, v_area] = ...
+                computeUncertaintyMeasures2D(m_valueMap,...
+                value_gs+level_offsets, v_range1, v_range2);
+            [v_diam_LOS, v_area_LOS] = ...
+                computeUncertaintyMeasures2D( m_valueMap_LOS, ...
+                value_gs_LOS+level_offsets, v_range1, v_range2);
             
-            figure(990); clf
-                mesh(m_grid_x1, m_grid_x2, normalized_pdf); hold on
-                mesh(m_grid_x1, m_grid_x2, normalized_pdf_LOS);            
-            F(4) = GFigure.captureCurrentFigure;  
+            figure(996); clf
+            subplot(1, 2, 1)
+                plot(level_offsets, v_diam);
+                hold on
+                plot(level_offsets, v_diam_LOS);
+                xlabel 'offset'
+                ylabel 'diameter'
+                title 'level set diameter'
+            subplot(1, 2, 2)
+                plot(level_offsets, v_area);
+                hold on
+                plot(level_offsets, v_area_LOS);
+                xlabel 'offset'
+                ylabel 'area'
+                title 'level set area measure'
+                legend ('NLOS', 'NLOS-free', 'location', 'northwest')
+
+            level_offsets_contourplot = linspace(0.01, 1, 3)*value_gs;
+            figure(997); clf         
+            subplot(1, 2, 1)
+                c_legend{1} = obj.plot_sources(m_s); hold on
+                c_legend{2} = obj.plot_sensor(v_x_true);
+                contour(v_range1, v_range2, m_valueMap, ...
+                    value_gs+level_offsets_contourplot)
+                c_legend{3} = 'objective function - min';
+                obj.plot_estimates(v_x_hat, obj.ch_altEstimate)
+                c_legend{4} = 'Relaxed ARS';
+                obj.plot_estimates(v_x_hat_gs, obj.ch_gsEstimate)
+                c_legend{5} = 'ARS, grid search';
+                title 'worst case, some NLOS range meas.'
+                legend(c_legend);
+            subplot(1, 2, 2)
+                c_legend{1} = obj.plot_sources(m_s); hold on
+                c_legend{2} = obj.plot_sensor(v_x_true);
+                contour(v_range1, v_range2, m_valueMap_LOS, ...
+                    value_gs_LOS + level_offsets_contourplot)
+                c_legend{3} = 'objective function - min';
+                obj.plot_estimates(v_x_hat_LOS, obj.ch_altEstimate)
+                c_legend{4} = 'Relaxed ARS';
+                obj.plot_estimates(v_x_hat_gs_LOS, obj.ch_gsEstimate)
+                c_legend{5} = 'ARS, grid search';
+                title 'worst case, NLOS-free range meas.'
+                legend(c_legend);
+            F(2) = GFigure.captureCurrentFigure;
+            
+            
+%             figure(998); clf
+%             ax (1) = subplot(1, 2, 1);
+%                 mesh(m_grid_x1, m_grid_x2, m_valueMap);
+%             ax (2) = subplot(1, 2, 2);
+%                 mesh(m_grid_x1, m_grid_x2, m_valueMap_LOS);
+%                 % stem3(v_x_hat(1),    v_x_hat(2),    value_mrle, '^m');
+%                 % stem3(v_x_wang(1),   v_x_wang(2),   value_wang, 'vr')
+%                 % stem3(v_x_grid_s(1), v_x_grid_s(2), value_gridsearch, 'sm')
+%             linkprop(ax, {'CameraUpVector', 'CameraPosition', ...
+%                 'CameraTarget', 'XLim', 'YLim', 'ZLim'})
+%             F(2) = GFigure.captureCurrentFigure;
+%                
+%             figure(999); clf
+%             ax (1) = subplot(1, 2, 1);
+%                 mesh(m_grid_x1, m_grid_x2, unnormalized_pdf);
+%             ax (2) = subplot(1, 2, 2);
+%                 mesh(m_grid_x1, m_grid_x2, unnormalized_pdf_LOS);
+%             linkprop(ax, {'CameraUpVector', 'CameraPosition', ...
+%                 'CameraTarget', 'XLim', 'YLim', 'ZLim'})
+%             F(3) = GFigure.captureCurrentFigure;  
+%             
+%             figure(990); clf
+%                 mesh(m_grid_x1, m_grid_x2, normalized_pdf); hold on
+%                 mesh(m_grid_x1, m_grid_x2, normalized_pdf_LOS);            
+%             F(4) = GFigure.captureCurrentFigure;  
                                       
         end
         
@@ -793,8 +847,8 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
             disp 'calculating value map...'
             factor = 5000; % for the time being, a magic number :(
             for k = 1:2
-                cm_value{k} = arle{k}.value_map( m_grid_x1, m_grid_x2, ...
-                    v_d{k}, m_s{k});
+                cm_value{k} = arle{k}.valueMap(v_d{k}, m_s{k}, ...
+                    m_grid_x1, m_grid_x2);
                 v_value_gs(k) = min(cm_value{k}(:));
                 cm_unPdf{k} = exp((v_value_gs(k)-cm_value{k})/factor);
                 cm_nPdf{k}  = cm_unPdf{k}./sum(cm_unPdf{k}(:)); %normalized pdf
@@ -879,6 +933,131 @@ classdef RobustLocationExperiments < ExperimentFunctionSet
                                       
         end
 
+        % First experiment with the greedy search for the max in 
+        % ARSRobustLocationEstimator
+        function F = experiment_210(obj, n_coord_grid)
+            rng(5);
+            obj.N = 8; %! was 15
+            N_fewer = 6;
+            [m_s{1}, v_x_true] = obj.generateSources_Sensor();
+            m_s{2} = obj.generateSources_Sensor();
+            m_s{2} = m_s{2}(:,1:N_fewer);
+            v_d{1}   = obj.rangeDifferences(v_x_true, m_s{1}, obj.rho);
+            v_d{2}   = obj.rangeDifferences(v_x_true, m_s{2}, obj.rho);
+            %v_d_LOS = obj.rangeDifferences(v_x_true, m_s{1}, 0 );
+            
+            for k = 1:2
+                arle{k} = ARSRobustLocationEstimator();
+                arle{k}.param_rho = obj.rho;
+            end
+%             [v_x_hat, v_r_mrle, v_value_mrle] = ...
+%                 mrle.solve_robust_loc(v_d, m_s, obj.rho);
+%             value_mrle = mrle.calculate_value(v_x_hat, v_d, m_s, obj.rho);
+%             
+%             wle = WangLocationEstimator;
+%             [v_x_wang, v_r_wang] = ...
+%                 wle.solve_robust_loc(v_d, m_s, obj.rho);
+%             value_wang = mrle.calculate_value(v_x_wang, v_d, m_s, obj.rho);
+                
+            % create value map
+            if isempty(n_coord_grid)
+                n_coord_grid = obj.n_corod_grid_default;
+            end
+            m_points = [cat(2, m_s{:}) v_x_true];
+            range1 = obj.exagg_linspace(min(m_points(1,:)), ...
+                max(m_points(1,:)),  0, 1, n_coord_grid);
+            range2 = obj.exagg_linspace(min(m_points(2,:)), ...
+                max(m_points(2,:)), 0, 1, n_coord_grid);
+            [m_grid_x1, m_grid_x2] = meshgrid(range1, range2);
+            disp 'calculating value map...'
+            factor = 5000; % for the time being, a magic number :(
+            for k = 1:2
+                cm_value{k} = arle{k}.valueMap(v_d{k}, m_s{k}, ...
+                    m_grid_x1, m_grid_x2);
+                v_value_gs(k) = min(cm_value{k}(:));
+                cm_unPdf{k} = exp((v_value_gs(k)-cm_value{k})/factor);
+                cm_nPdf{k}  = cm_unPdf{k}./sum(cm_unPdf{k}(:)); %normalized pdf
+                c_sumUP(k)  = sum(cm_unPdf{k}(:));
+            end
+
+            n_cl = 20;
+            v_pdfLevels = linspace(0, 1/min(c_sumUP), n_cl);
+            for k = 1:2
+                cv_confidenceLevels{k} = zeros(n_cl, 1);
+                for k_cl = 1:n_cl
+                    m_b = (cm_nPdf{k} >= v_pdfLevels(k_cl));
+                    cv_confidenceLevels{k}(k_cl) = sum(cm_nPdf{k}(m_b(:)));
+                end
+            end
+            
+            figure(996); clf
+            plot(cv_confidenceLevels{1}, v_pdfLevels);
+            hold on
+            plot(cv_confidenceLevels{2}, v_pdfLevels);
+            
+            v_standardConfidenceLevels = linspace(0.8, 0.95, 5);
+            for k = 1:2
+                [v_cLevels, v_idx] = unique(cv_confidenceLevels{k});                
+                contour_levels{k} = interp1(v_cLevels, v_pdfLevels(v_idx), ...
+                    v_standardConfidenceLevels);                
+            end
+            figure(997); clf 
+            for k = 1:2
+               subplot(1, 2, k)
+                c_legend{1} = obj.plot_sources(m_s{k}); hold on
+                c_legend{2} = obj.plot_sensor(v_x_true);
+                contour(range1, range2, cm_nPdf{k}, contour_levels{1})%!
+                c_legend{3} = 'objective function';
+                title(sprintf('worst case, source set %d', k))
+                legend(c_legend);
+            end
+            F = GFigure.captureCurrentFigure;
+            
+            figure(998); clf
+            
+%             contour_levels_LOS = linspace(...
+%                 value_gs_LOS, 10*value_gs_LOS, 30);
+            for k = 1:2
+               subplot(1, 2, k)
+                contour_levels_value = linspace(...
+                    v_value_gs(k), v_value_gs(k)+ v_value_gs(1), 5);
+                c_legend{1} = obj.plot_sources(m_s{k}); hold on
+                c_legend{2} = obj.plot_sensor(v_x_true);
+                contour(range1, range2, cm_value{k}, contour_levels_value)
+                c_legend{3} = 'objective function';
+                title(sprintf('worst case, source set %d', k))
+                legend(c_legend);
+            end
+            F(2) = GFigure.captureCurrentFigure;
+            
+%             figure(998); clf
+%             ax (1) = subplot(1, 2, 1);
+%                 mesh(m_grid_x1, m_grid_x2, m_value);
+%             ax (2) = subplot(1, 2, 2);
+%                 mesh(m_grid_x1, m_grid_x2, m_value_LOS);
+%                 % stem3(v_x_hat(1),    v_x_hat(2),    value_mrle, '^m');
+%                 % stem3(v_x_wang(1),   v_x_wang(2),   value_wang, 'vr')
+%                 % stem3(v_x_grid_s(1), v_x_grid_s(2), value_gridsearch, 'sm')
+%             linkprop(ax, {'CameraUpVector', 'CameraPosition', ...
+%                 'CameraTarget', 'XLim', 'YLim', 'ZLim'})
+%             F(2) = GFigure.captureCurrentFigure;
+%                
+%             figure(999); clf
+%             ax (1) = subplot(1, 2, 1);
+%                 mesh(m_grid_x1, m_grid_x2, unnormalized_pdf);
+%             ax (2) = subplot(1, 2, 2);
+%                 mesh(m_grid_x1, m_grid_x2, unnormalized_pdf_LOS);
+%             linkprop(ax, {'CameraUpVector', 'CameraPosition', ...
+%                 'CameraTarget', 'XLim', 'YLim', 'ZLim'})
+%             F(3) = GFigure.captureCurrentFigure;  
+%             
+%             figure(990); clf
+%                 mesh(m_grid_x1, m_grid_x2, normalized_pdf); hold on
+%                 mesh(m_grid_x1, m_grid_x2, normalized_pdf_LOS);            
+%             F(4) = GFigure.captureCurrentFigure;  
+                                      
+        end
+        
     end
     
     methods (Static)

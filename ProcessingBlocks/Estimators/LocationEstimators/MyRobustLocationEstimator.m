@@ -20,7 +20,8 @@ classdef MyRobustLocationEstimator
             
             [value_old, v_r_old] = ...
                 obj.calculate_value_old(x_out, v_d, m_s, rho, e0_wc);   
-            [value_out, v_r_out] = obj.calculate_value(x_out, v_d, m_s, rho);
+            [value_out, v_r_out] = ...
+                obj.calculate_value(x_out, v_d, m_s, rho);
             % TODO!
             %norm(value_out-value_old) 
             %keyboard
