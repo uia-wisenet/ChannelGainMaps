@@ -21,7 +21,6 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
         % This experiment implements cross-validations for the choice of
         % parameters
         
-        function F=experiment_101(obj,niter)
         function F=experiment_101(obj,niter) 
             st = dbstack;
             namestr = st.name;
