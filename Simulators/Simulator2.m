@@ -45,16 +45,16 @@ classdef Simulator2
                     [m_grid_x(ind_gridPoint), m_grid_y(ind_gridPoint)]);
                 ltc.go(ind_gridPoint);
             end
-            
-            disp('Extracting features...')
+            % Add noise:            
             t4_receivedPilotSignals = t4_nps + ... % taken from Sampler
                 obj.sampler.pilotNoiseSTD/sqrt(2) *( ...
                 randn(size(t4_nps)) + 1i*randn(size(t4_nps)) ); 
-            
+            % Reshape tensor to be used by featureExtractor:
             v_size = size(t4_receivedPilotSignals);
             t3_reshaped_receivedPS = reshape(t4_receivedPilotSignals, ...
                 [v_size(1:2), prod(v_size(3:4))]);
-
+            
+            disp('Extracting features...')
             t_allLocFreeFeatures  = obj.featureExtractor.locFreeExtract(...
                 t3_reshaped_receivedPS); %Center of mass of xcorr
             t_allLocBasedFeatures = obj.featureExtractor.locBasedExtract(...
@@ -86,11 +86,15 @@ classdef Simulator2
                 trueLoc_train(:, ind_pair, 2) = xy_receiver';
                 ltc.go(ind_pair);
             end
+            % add noise:
+            channelForPairsTr = channelsForPairsTr + obj.sampler.powerNoiseSTD* ...
+                randn(size(channelsforPairsTr));
+            
             channelForPairs_tracemap = zeros(1, N_pair_tracemap); 
             trueLoc_tracemap  = zeros([2, size(m_tracemap_pairs)]);
             locFreeFeat_tracemap  = zeros([n_sp_CoM, size(m_tracemap_pairs)]);
             locBasedFeat_tracemap = zeros([n_sp_TDoA, size(m_tracemap_pairs)]);
-            disp('Computing channel gains (for map tracing)...')
+            disp('Computing channel gains (noiseless, for map tracing)...')
             ltc = LoopTimeControl(N_pair_tracemap);
             for ind_pair = 1:N_pair_tracemap
                 ind_tx = m_tracemap_pairs(ind_pair, 1);
