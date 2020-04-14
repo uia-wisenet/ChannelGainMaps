@@ -4,9 +4,9 @@ classdef Simulator2
         locFreeEstimator LocationFreeEstimator
         locBasedEstimator LocationBasedEstimator
         hybridEstimator HybridEstimator
-        locEstimator WangLocationEstimator
+        locEstimator LocationEstimator_tdoa = DiverseLocationEstimator('');
         featureExtractor
-        sampler
+        sampler % the only property we use from sampler is pilotNoiseSTD
     end
     
     methods
@@ -33,7 +33,9 @@ classdef Simulator2
             %  for all points in the grid
             
             disp('Precomputing pilot signals...')
-            t4_nps = zeros([n_sources, ... % noiseless pilot signals
+            % noiseless pilot signals
+            % 4-way tensor: t4_nps(source, pilotSample, ind_x, ind_y)
+            t4_nps = zeros([n_sources, ... 
                 obj.generator.maxSamplesPerPilot,size(m_grid_x)]);
             ltc = LoopTimeControl(numel(m_grid_x));
             for ind_gridPoint = 1:numel(m_grid_x)
@@ -54,14 +56,14 @@ classdef Simulator2
                 [v_size(1:2), prod(v_size(3:4))]);
 
             t_allLocFreeFeatures  = obj.featureExtractor.locFreeExtract(...
-                t3_reshaped_receivedPS);
+                t3_reshaped_receivedPS); %Center of mass of xcorr
             t_allLocBasedFeatures = obj.featureExtractor.locBasedExtract(...
                 t3_reshaped_receivedPS); %Time differences of arrival
             
             %% this section can be refactored by defining a static method
             channelForPairsTr=zeros(1,N_pair_train);
             n_sp_CoM  = size(t_allLocFreeFeatures,  1); % no. of source pairs
-            n_sp_TDoA = size(t_allLocBasedFeatures, 1);
+            n_sp_TDoA = size(t_allLocBasedFeatures, 1); % no. of source pairs
             trueLoc_train  = zeros([2, size(m_train_pairs)]);
             locFreeFeatures_train  = zeros([n_sp_CoM, size(m_train_pairs)]);
             locBasedFeatures_train = zeros([n_sp_TDoA, size(m_train_pairs)]);
@@ -125,21 +127,25 @@ classdef Simulator2
             disp ('Training LocBased...')
             my_locBasedTrainer = LocBasedTrainer;
             my_locBasedTrainer.estimator = obj.locBasedEstimator;
-            estim_loc_tx = obj.locEstimator.estimateLocationRobustSDR(...
-                locBasedFeatures_train(:,:,1)); %estimated locations
-            estim_loc_rx = obj.locEstimator.estimateLocationRobustSDR(...
+            m_estim_loc_tx = obj.locEstimator.estimateLocations(... 
+                locBasedFeatures_train(:,:,1));
+            m_estim_loc_rx = obj.locEstimator.estimateLocations(...
                 locBasedFeatures_train(:,:,2));
-            estim_loc_train = cat(3, estim_loc_tx, estim_loc_rx);
+            % t3_estimatedLocation is a 3-way tensor: 
+            % (space_dim_index, sample_index, rx_or_tx)
+            t3_estim_loc_train = cat(3, m_estim_loc_tx, m_estim_loc_rx);
             locBasedFKM = my_locBasedTrainer.train(...
-                estim_loc_train,channelForPairsTr);
+                t3_estim_loc_train,channelForPairsTr);
             
             disp('Evaluating LocBased at validation set...')
-            estim_loc_tm_tx = obj.locEstimator.estimateLocationRobustSDR(...
+            estim_loc_tm_tx = obj.locEstimator.estimateLocations(...
                 locBasedFeat_tracemap(:,:,1)); %estimated loc (tracemap)
-            estim_loc_tm_rx = obj.locEstimator.estimateLocationRobustSDR(...
+            estim_loc_tm_rx = obj.locEstimator.estimateLocations(...
                 locBasedFeat_tracemap(:,:,2));
-            estim_loc_tracemap = cat(3, estim_loc_tm_tx, estim_loc_tm_rx);
-            locBasedMapEstimate = locBasedFKM.evaluate(estim_loc_tracemap);
+            % t3_estim_loc_tracemap is a 3-way tensor: 
+            % (space_dim_index, sample_index, rx_or_tx)
+            t3_estim_loc_tracemap = cat(3, estim_loc_tm_tx, estim_loc_tm_rx);
+            locBasedMapEstimate = locBasedFKM.evaluate(t3_estim_loc_tracemap);
             
 %              disp ('Training Hybrid...')
 %             my_hybridTrainer = HybridTrainer;
