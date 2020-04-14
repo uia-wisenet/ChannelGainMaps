@@ -16,7 +16,7 @@ classdef LocationFreeEstimator < Estimator
         regParEval %regularization parameter for completing missing features when evaluating the map
         evalOption % choose the option of determining missing features in the map evaluation
         
-        b_verbose = 0
+        b_verbose = 1
     end
     
     methods

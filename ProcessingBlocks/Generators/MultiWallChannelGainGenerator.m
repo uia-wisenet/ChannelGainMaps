@@ -1,9 +1,11 @@
 classdef MultiWallChannelGainGenerator < RayTracingGenerator
     % Allows to create C2Ms using the multiwall propagation model
     % proposed in the paper by Salaheddin et al in
-    % An enhanced modified multi wall propagation model,� in Proc. IEEE Global Internet Things Summit,
-    % Geneva, Switzerland, Jun. 2017, pp. 1�4.
+    % An enhanced modified multi wall propagation model, in Proc. IEEE Global Internet Things Summit,
+    % Geneva, Switzerland, Jun. 2017, pp. 1-4.
     
+    % TODO: this class has a lot of code repetition between methods
+    %       calculateImpulse_Resp  and  calculateCGBetween
     properties
         
         ptx % the trasnmit power for the C2M
@@ -40,6 +42,8 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
         %
         X % x-coordinates of all walls
         Y % y-coordinates of all walls
+        
+        b_verbose = 1
         
     end
     
@@ -905,7 +909,6 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                 
                 %%
                 H_D(ind_source, 1:length(h_D))=h_D; % Get the impulse responses from all sources
-                
             end
         end
         
@@ -1776,7 +1779,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             channel_out=zeros(obj.n_gridpoints_x,obj.n_gridpoints_y);
             source_loc=[obj.xt_loc; obj.yt_loc];
             estimatedPilotSignals=zeros(size(source_loc,2) ,obj.maxSamplesPerPilot,obj.n_gridpoints_x,obj.n_gridpoints_y);
-            %             ltm =LoopTimeControl(obj.n_gridpoints_x*obj.n_gridpoints_x);
+            ltm =LoopTimeControl(obj.n_gridpoints_x*obj.n_gridpoints_x);
             for ind_xr = 1:obj.n_gridpoints_x
                 for ind_yr = 1:obj.n_gridpoints_y
                     if b_iWantChannelGains
@@ -1785,7 +1788,9 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                     end
                     estimatedPilotSignals(:,:,ind_xr, ind_yr)=obj.calculateImpulse_Resp([evaluationGrid_x(ind_xr,ind_yr),...
                         evaluationGrid_y(ind_xr,ind_yr)]); %This is the critical line
-                    %                  ltm.go(ind_yr+(ind_xr-1)*obj.n_gridpoints_y);
+                    if obj.b_verbose
+                        ltm.go(ind_yr+(ind_xr-1)*obj.n_gridpoints_y);
+                    end
                 end
             end
         end

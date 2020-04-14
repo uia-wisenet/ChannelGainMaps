@@ -10,7 +10,7 @@ classdef LocationBasedEstimator < Estimator
         Xenb % locations of the eNBs
         locationNoiseSTD % standard deviation of the noise
         
-        b_verbose = 0
+        b_verbose = 1
     end
     
     methods
