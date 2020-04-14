@@ -748,8 +748,8 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
         % experiment using simulator2 class and hybrid simulator for
         % visualizing channel gains 
         function F = experiment_302(obj, niter)
-            % simulation using the simplified simulator class (Simulator2)
-            % Same inputs as exp 203
+            % using Simulator2
+            % Similar inputs to exp 203
             
             rng(1)
             
