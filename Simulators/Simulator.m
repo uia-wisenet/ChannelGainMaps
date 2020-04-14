@@ -97,11 +97,11 @@ classdef Simulator
                 size(measurement_pilots_val,3)*2]);
             channelForPairsVal=zeros(1,N_pair_val);
             disp('Evaluating the true map at the validation set...')
-            ltc = LoopTimeControl(N_pair_val);
+            %ltc = LoopTimeControl(N_pair_val);
             for ind_pair=1: N_pair_val 
                 channelForPairsVal(ind_pair) = obj.generator.calculateCGBetween([UELocationsPairsVal(1, ind_pair), UELocationsPairsVal(2, ind_pair)],...
                     [UELocationsPairsVal(3, ind_pair), UELocationsPairsVal(4, ind_pair)]);
-                ltc.go(ind_pair);
+                %ltc.go(ind_pair);
             end
             disp('Extracting features...')
             extractedLocfreeFeaturesVal=obj.featureExtractor.locFreeExtract(measurement_pilots_val);
@@ -173,6 +173,8 @@ classdef Simulator
                % [locBasedCoefficients, locBasedIntercept] = obj.locBasedEstimator.train(estimatedLocation,channelForPairsTr);
                 my_locBasedTrainer = LocBasedTrainer;
                 my_locBasedTrainer.estimator = obj.locBasedEstimator;
+                % estimatedLocation is a 3-way tensor: 
+                % (space_dim_index, sample_index, rx_or_tx)
                 locBasedFKM = my_locBasedTrainer.train(estimatedLocation,channelForPairsTr);
                 
                 % Location Based evaluation
@@ -227,8 +229,9 @@ classdef Simulator
                     allPointEstimatedLocation=obj.locBasedEstimator.estimateLocationFromDistances(allLocBasedFeatures);
                     allPointEstimatedLocation=reshape(allPointEstimatedLocation, [size(allPointEstimatedLocation,1) size(allPointEstimatedLocation,2)/2,2]);
                 else
-%                     allPointEstimatedLocation=obj.locEstimator.estimateLocationIRWSRDLS(allLocBasedFeatures);
-                    [allPointEstimatedLocation, eig_vals_ratios]=obj.locEstimator.estimateLocationRobustSDR(allLocBasedFeatures);
+                    allPointEstimatedLocation=obj.locEstimator.estimateLocationIRWSRDLS(allLocBasedFeatures); %TODO: CASE Structure that selects method based on property               
+                    eig_vals_ratios = [];
+                    %[allPointEstimatedLocation, eig_vals_ratios]=obj.locEstimator.estimateLocationRobustSDR(allLocBasedFeatures);
                     allPointEstimatedLocation=reshape(allPointEstimatedLocation, [size(allPointEstimatedLocation,1) size(allPointEstimatedLocation,2)/2,2]);
                     %              allPointEstimatedLocation=allPointSampler.UELocations;
                 end
