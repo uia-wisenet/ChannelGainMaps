@@ -758,9 +758,9 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             selectedWalls=[2 3];
             
             kernelSigmaLF = 69;
-            kernelSigmaLB=35;
-            lambdaLF = 1e-5;
-            lambdaLB =8e-3;
+            kernelSigmaLB = 35;
+            lambdaLF      = 1e-5;
+            lambdaLB      = 8e-3;
         
             gridSize = [20 20];
             N_pair_train = 100; %
@@ -996,11 +996,20 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             disp 'Running only one experiment (no monte carlo yet)'
             [featDiff, ~] = myBiasErrorSim.simulate(m_grid_x, m_grid_y);
             
-            % Plot the histogram of the feature difference
-            close all
-            nbins = 100;
-            hist(vec(featDiff), nbins)
-            F = []; % GFigure.captureCurrentFigure;
+            %% Plot the histogram and CDF of the feature difference
+            figure(999); clf           
+                nbins = 100;
+                [counts, bins] = hist(vec(abs(featDiff)), nbins);
+                histogram(vec(abs(featDiff)), nbins);
+                xlabel '|d - r|'
+                ylabel count
+                hold on
+            F = GFigure.captureCurrentFigure();
+            figure(998); clf
+                plot(bins, cumsum(counts)/sum(counts));
+                xlabel '|d - r|'
+                ylabel cdf
+            F(2) = GFigure.captureCurrentFigure();
         end
            
     end
