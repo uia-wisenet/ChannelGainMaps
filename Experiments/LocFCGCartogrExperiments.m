@@ -22,6 +22,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
         % parameters
         
         function F=experiment_101(obj,niter)
+        function F=experiment_101(obj,niter) 
             st = dbstack;
             namestr = st.name;
             simulationNumber =str2double(namestr(37:end));
@@ -117,6 +118,104 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             end
             F = [];
         end
+
+        function F=experiment_1011(obj,niter) %! same as 101, but toy size
+            st = dbstack;
+            namestr = st.name;
+            simulationNumber =str2double(namestr(37:end));
+            results_filename = sprintf('./savedResults/dataTest%d.mat', simulationNumber);
+            if obj.b_loadData && exist(results_filename, 'file')
+                fprintf('%s found. This experiment has been run before but we are not checking the integrity of the saved files. Loading and plotting results...\n', results_filename);
+                load(sprintf('./savedResults/dataTest%d.mat', simulationNumber))
+            else
+                fprintf('%s not found or the flag for loading data is disabled. Running your experiment...\n', results_filename);
+                c = CartographySimulations;
+                c.f = 800e6;
+                c.pilotNoiseSTD =1e-5;
+                c.powerNoiseSTD  =0.5;
+                c.maxSamplesPerPilot=10;
+                c.receiverBandwidth = 20e6;
+                c.gridSize = [4 4]; % was 20, 20
+                c.numberOfSources=5;
+                
+                c.computeOnlyFeatures = false;
+                
+                selectedWalls=1:5;
+                
+                x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+                y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+                
+                c.n_runs = 10; %!niter;% 10
+                
+                c.N_ue_pairs=50; % number of sensor pairs %! was 500
+                
+                
+                c.simLocBased=true;  % false disables LocB cartography
+                c.testDiffSetOfFeatures=false;
+                c.PCAenabler=false;
+                c.considerMissingData=false;
+                
+                if  c.testDiffSetOfFeatures==true
+                    c.featureCell=c.featureCombinations(10,4); % generate all combinations of features
+                    c.N_feat_used=1:length(c.featureCell);
+                    c.N_feat =c.N_feat_used;
+                else
+                    c.N_feat_used=size(combnk(1:c.numberOfSources,2),1);
+                    c.N_feat=1;
+                end
+                if  c.PCAenabler==true
+                    c.N_feat =2:3; %  PCA dimension
+                elseif c.considerMissingData==true
+                    c.N_feat =-85:3:-41; % receiver sensitivy range in dBm
+                end
+                
+                c.inParallel =false;
+                combin_pairs=combnk(1:c.gridSize(1)*c.gridSize(2),2);
+                %Cross validation starts here
+                frac_train=0.6; % percentage of pairs to use for training
+                frac_val=0.2; % percentage of pairs to use for validation
+                n_points_sig_lam=5; %! was 50
+                kernelSigmaLF=linspace(1e-2,1e2,n_points_sig_lam);
+                lambdaLF=linspace(1e-7,3e-3,n_points_sig_lam);
+                kernelSigmaLB=linspace(1e-2,1e2,n_points_sig_lam);
+                lambdaLB=linspace(1e-7,3e-3,n_points_sig_lam);
+                
+                NMSE_LF=zeros(length(kernelSigmaLF), length(lambdaLF));
+                NMSE_LB=zeros(length(kernelSigmaLB), length(lambdaLB));
+                ltm =LoopTimeControl(length(kernelSigmaLF)*length(lambdaLF));
+                for ind_sig=1:length(kernelSigmaLF)
+                    for ind_lam=1:length(lambdaLF)
+                        c.kernelSigmaLF =kernelSigmaLF(ind_sig);
+                        c.kernelSigmaLB =kernelSigmaLB(ind_sig);
+                        c.lambdaLF=lambdaLF(ind_lam);
+                        c.lambdaLB=lambdaLB(ind_lam);
+                        [~,~, ~,~, ~, ~,~,...
+                            ~,~,~,~,~,~,~,...
+                            ~, ~, NMSE_locFree,NMSE_locBased,~]=c.run(selectedWalls,combin_pairs, frac_train,frac_val,...
+                            x_wall_file_name,y_wall_file_name,simulationNumber);
+                        
+                        NMSE_LF(ind_sig,ind_lam)=NMSE_locFree;
+                        NMSE_LB(ind_sig,ind_lam)=NMSE_locBased;
+                        ltm.go(ind_lam+(ind_sig-1)*length(lambdaLF));
+                    end
+                end
+                
+                [min_nmse_locF, J_lf]=min(NMSE_LF(:));
+                [ind_sigOpt_lf, ind_lamOpt_lf]=ind2sub(size(NMSE_LF),J_lf);
+                min_nmse_locF
+                kernelSigmaLF_Opt=kernelSigmaLF(ind_sigOpt_lf)
+                lambdaLF_Opt=lambdaLF(ind_lamOpt_lf)
+                
+                [min_nmse_locB, J_lb]=min(NMSE_LB(:));
+                [ind_sigOpt_lb, ind_lamOpt_lb]=ind2sub(size(NMSE_LB),J_lb);
+                min_nmse_locB
+                kernelSigmaLB_Opt=kernelSigmaLB(ind_sigOpt_lb)
+                lambdaLB_Opt=lambdaLB(ind_lamOpt_lb)
+                save (sprintf('./savedResults/dataTest%d', simulationNumber))
+            end
+            F = [];
+        end
+
         
         % This experiment tests the optimal parameters obtained in experiment 101
         function F=experiment_102(obj,niter)
