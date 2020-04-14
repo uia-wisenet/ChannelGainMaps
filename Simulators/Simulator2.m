@@ -7,6 +7,8 @@ classdef Simulator2
         locEstimator LocationEstimator_tdoa = DiverseLocationEstimator('');
         featureExtractor
         sampler % the only property we use from sampler is pilotNoiseSTD
+        
+        PCAenable = 0;
     end
     
     methods
@@ -22,6 +24,8 @@ classdef Simulator2
             assert(size(m_train_pairs, 2)    == 2);
             assert(size(m_tracemap_pairs, 2) == 2);
             assert(all(size(m_grid_x)==size(m_grid_y)));
+            
+            assert(obj.PCAenable==0, 'tpca not implemented yet in Simulator2')
             
             N_pair_train    = size(m_train_pairs,    1);
             N_pair_tracemap = size(m_tracemap_pairs, 1);
