@@ -15,6 +15,8 @@ classdef LocationFreeEstimator < Estimator
         desiredRank
         regParEval %regularization parameter for completing missing features when evaluating the map
         evalOption % choose the option of determining missing features in the map evaluation
+        
+        b_verbose = 0
     end
     
     methods
@@ -167,7 +169,7 @@ classdef LocationFreeEstimator < Estimator
                             my_row = feval(obj.kernel, m_row_inputs_to_kernels, ...
                                 [LocFeatures(:,:,1);LocFeatures(:,:,2)]);
                             Ke1(i,:) = my_row;
-                            ltc.go(i);
+                            if obj.b_verbose, ltc.go(i); end
                         end
 %                     else
 %                         rethrow(ME);
