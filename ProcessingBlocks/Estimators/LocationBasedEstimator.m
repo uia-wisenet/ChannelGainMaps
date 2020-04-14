@@ -9,6 +9,8 @@ classdef LocationBasedEstimator < Estimator
         regularizationParameter % lambda (ridge regression)
         Xenb % locations of the eNBs
         locationNoiseSTD % standard deviation of the noise
+        
+        b_verbose = 0
     end
     
     methods
@@ -61,7 +63,7 @@ classdef LocationBasedEstimator < Estimator
                         my_row = feval(obj.kernel, m_row_inputs_to_kernels, ...
                             [estimatedLocation(:,:,1);estimatedLocation(:,:,2)]);
                         Ke1(i,:) = my_row;
-                        ltc.go(i);
+                        if obj.b_verbose, ltc.go(i); end
                      end
 %                 else
 %                     rethrow(ME);
