@@ -278,7 +278,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                 c.lambdaLB=1.3e-3;
                 [~,~, ~,~, ~, ~,~,...
                     ~,~,~,~,~,~,~,...
-                    ~, NMSE_locFree,NMSE_locBased,UELocationsPairsTest]=c.run(selectedWalls,combin_pairs, frac_train,frac_val,...
+                    ~, ~, NMSE_locFree,NMSE_locBased,UELocationsPairsTest]=c.run(selectedWalls,combin_pairs, frac_train,frac_val,...
                     x_wall_file_name,y_wall_file_name,simulationNumber);
                 save (sprintf('./savedResults/dataTest%d', simulationNumber))
             end
@@ -534,9 +534,10 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                 pairs_val = reshape(t_val_pairs, c.gridSize(1)*c.gridSize(2)*length(v_tile_sequence),2);
                 
                 c.randomized_pairs = 0;
-                [~,~,~, ~,~,~, ~,~,~ ,~,locFreeEstimate,locBasedEstimate, ~,~,~, ...
-                    NMSE_locFree,NMSE_locBased,UELocationsPairsTest,  trueGains  ...
-                    ]=c.run(selectedWalls,combin_pairs, frac_train, pairs_val,    ...
+                [~,~,~, ~,~,~, ~, ...
+                    ~,~ ,~,locFreeEstimate,locBasedEstimate, ~,~,...
+                    ~, ~, NMSE_locFree,NMSE_locBased,UELocationsPairsTest,  trueGains  ...
+                    ]=c.run(selectedWalls,combin_pairs, frac_train, pairs_val,   ...
                     x_wall_file_name,y_wall_file_name,simulationNumber);
                 %                 M_trueMap = create_animation2([combin_pairs trueGains' ],          c.gridSize(1), c.gridSize(2), 'trueMap' );
                 %                 M_locFree = create_animation2([combin_pairs locFreeEstimate{1}' ], c.gridSize(1), c.gridSize(2), 'locFree' );
@@ -546,6 +547,98 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             end
             F = [];
         end
+
+        %same as 203
+        function F=experiment_204(obj,niter)
+            st = dbstack;
+            namestr = st.name;
+            simulationNumber =str2double(namestr(37:end));
+            results_filename = sprintf('./savedResults/dataTest%d.mat', simulationNumber);
+            if obj.b_loadData && exist(results_filename, 'file')
+                fprintf('%s found. This experiment has been run before but we are not checking the integrity of the saved files. Loading and plotting results...\n', results_filename);
+                load(sprintf('./savedResults/dataTest%d.mat', simulationNumber))
+            else
+                fprintf('%s not found or the flag for loading data is disabled. Running your experiment...\n', results_filename);
+                c = CartographySimulations;
+                c.f = 800e6;
+                c.pilotNoiseSTD =1e-5;
+                c.powerNoiseSTD  =0.5;
+                c.maxSamplesPerPilot=10;
+                c.receiverBandwidth = 20e6;
+                c.gridSize = [ 20 20 ];
+                c.numberOfSources=5;
+                
+                c.computeOnlyFeatures = false;
+                
+                selectedWalls=1:5;
+                
+                x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+                y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+                
+                c.n_runs = 1
+                
+                c.N_ue_pairs=1000; % number of sensor pairs
+                
+                c.simLocBased=true;  % false disables LocB cartography
+                c.testDiffSetOfFeatures=false;
+                c.PCAenabler=false;
+                c.considerMissingData=false;
+                
+                if  c.testDiffSetOfFeatures==true
+                    c.featureCell=c.featureCombinations(10,4); % generate all combinations of features
+                    c.N_feat_used=1:length(c.featureCell);
+                    c.N_feat =c.N_feat_used;
+                else
+                    c.N_feat_used=size(combnk(1:c.numberOfSources,2),1);
+                    c.N_feat=1;
+                end
+                if  c.PCAenabler==true
+                    c.N_feat =2:3; %  PCA dimension
+                elseif c.considerMissingData==true
+                    c.N_feat =-85:3:-41; % receiver sensitivy range in dBm
+                end
+                
+                c.inParallel =false;
+                combin_pairs=combnk(1:c.gridSize(1)*c.gridSize(2),2);
+                
+                frac_train=1; % percentage of pairs to use for training
+                frac_val=0; % percentage of pairs to use for testing here
+                
+                c.kernelSigmaLF =69;
+                c.kernelSigmaLB =43;
+                c.lambdaLF=1e-5;
+                c.lambdaLB=6e-3;
+                
+                %% Luismi:defining a trajectory
+                column_begin= 8;
+                rowskip = 1;
+                Ntraj = ceil(c.gridSize(2)./rowskip)-1;
+                final_index = column_begin+rowskip*Ntraj*c.gridSize(2);
+                v_tile_sequence = column_begin:(rowskip*c.gridSize(1)):final_index;
+                
+                t_val_pairs = zeros(c.gridSize(1)*c.gridSize(2),length(v_tile_sequence),2);
+                v_all_points = 1:c.gridSize(1)*c.gridSize(2);
+                for index = 1:length(v_tile_sequence)
+                    t_val_pairs(:, index, 1) = v_tile_sequence(index);
+                    t_val_pairs(:, index, 2) = v_all_points;
+                end
+                pairs_val = reshape(t_val_pairs, c.gridSize(1)*c.gridSize(2)*length(v_tile_sequence),2);
+                
+                c.randomized_pairs = 0;
+                [~,~,~, ~,~,~, ~, ...
+                 ~,~ ,~,locFreeEstimate,locBasedEstimate, ~,~,...
+                 ~, ~, NMSE_locFree,NMSE_locBased,UELocationsPairsTest,  trueGains  ...
+                    ]=c.run(selectedWalls,combin_pairs, frac_train, pairs_val,   ...
+                    x_wall_file_name,y_wall_file_name,simulationNumber);
+                %                 M_trueMap = create_animation2([combin_pairs trueGains' ],          c.gridSize(1), c.gridSize(2), 'trueMap' );
+                %                 M_locFree = create_animation2([combin_pairs locFreeEstimate{1}' ], c.gridSize(1), c.gridSize(2), 'locFree' );
+                %                 M_locBased= create_animation2([combin_pairs locBasedEstimate{1}'], c.gridSize(1), c.gridSize(2), 'locBased');
+                
+                save (sprintf('./savedResults/dataTest%d', simulationNumber))
+            end
+            F = [];
+        end
+
         
         function F = experiment_301(obj, niter)
             % simulation using the simplified simulator class (Simulator2)
