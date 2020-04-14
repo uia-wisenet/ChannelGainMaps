@@ -1,7 +1,7 @@
 classdef BiasErrorSimulator
     properties
         generator MapGenerator = PrecomputedMapGenerator();
-        locEstimator WangLocationEstimator
+        locEstimator LocationEstimator_tdoa = WangLocationEstimator();
         featureExtractor
         sampler
     end
