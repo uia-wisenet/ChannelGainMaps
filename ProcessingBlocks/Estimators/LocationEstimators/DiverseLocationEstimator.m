@@ -1,14 +1,52 @@
-classdef LocationEstimator
-    %UNTITLED Summary of this class goes here
-    %   Detailed explanation goes here
+classdef DiverseLocationEstimator < LocationEstimator_tdoa
+    % For backwards compatibility with former experiments, 
+    % this class contains one method for each implemented paper. 
     
     properties
-        Xenb
         locationNoiseSTD
+        ch_type % Options: 
+        %          reminimization
+        %          anihilation, 
+        %          treat_range_as_variable,
+        %          direction cosines
+        %          IRWSRDLS          
     end
     
     methods
-        function [estimatedLocationRemin,estimatedLocationAnnih] = estimateLocationReminAndAnnih(obj,measurements) % Reminimization and annihilation methods are used here
+        function obj = DiverseLocationEstimator(ch_type)
+            obj.ch_type = ch_type;
+        end
+        function v_estimatedLocation = estimateOneLocation(obj,v_measurements)
+            % INPUT:  (N-1)-vector containing the TDOA measurements
+            % OUTPUT: 2-vector     containing the location estimate
+            switch(obj.ch_type)
+                case 'IRWSRDLS'
+                    v_estimatedLocation = ...
+                        obj.estimateLocationIRWSRDLS(v_measurements);
+                otherwise
+                    error 'Not implemented yet (just needed to link the corresponding method)'
+            end
+        end
+        
+        function m_estimatedLocation = estimateLocations(obj,m_measurements)
+            % INPUT:  (N-1)-vector containing the TDOA measurements
+            % OUTPUT: 2-vector     containing the location estimate
+            switch(obj.ch_type)
+                case 'IRWSRDLS'
+                    m_estimatedLocation = ...
+                        obj.estimateLocationIRWSRDLS(m_measurements);
+                otherwise
+                    m_estimatedLocation = ...
+                        estimateLocations@LocationEstimator_tdoa(obj, m_measurements);
+            end
+        end
+    end
+    
+    methods
+        function [estimatedLocationRemin,estimatedLocationAnnih] = ...
+                estimateLocationReminAndAnnih(obj,measurements) 
+            % Reminimization and annihilation methods are used here
+            
             dim=2; % consider sources and UEs in 2D
             n_ues=size(measurements,2);
             n_sources_tdoa = size( measurements,1)-1; % excludes the reference source
@@ -35,7 +73,9 @@ classdef LocationEstimator
             estimatedLocationAnnih=ue_loc_calc_annihilationRange;
         end
         
-        function estimatedLocation = estimateLocationTreatRangeAs(obj,measurements) % Consider range as a variable method
+        function estimatedLocation = estimateLocationTreatRangeAs(obj,...
+                measurements) % Consider range as a variable method
+            
             dim=2; % consider sources and UEs in 2D
             n_ues=size(measurements,2);
             n_sources_tdoa = size( measurements,1)-1; % excludes the reference source
@@ -59,7 +99,10 @@ classdef LocationEstimator
             estimatedLocation= ue_loc_calc_TreatRangeAs; %ue_loc_calc_reminimization
         end
         
-        function estimatedLocationDirecCosines = estimateLocationDirectionCosines(obj,measurements) % using direction cosines
+        function estimatedLocationDirecCosines = ...
+                estimateLocationDirectionCosines(obj,measurements) 
+            % using direction cosines
+            
             dim=2; % consider sources and UEs in 2D
             n_ues=size(measurements,2);
             n_sources_tdoa = size( measurements,1)-1; % excludes the reference source
@@ -79,7 +122,9 @@ classdef LocationEstimator
             estimatedLocationDirecCosines=ue_loc_calc_DirecCos;
         end
         
-        function estimatedLocationIRWSRDLS = estimateLocationIRWSRDLS(obj,measurements) % using direction cosines
+        function estimatedLocationIRWSRDLS = estimateLocationIRWSRDLS(...
+                obj,measurements) % using direction cosines
+            
             dim=2;
             n_ues=size(measurements,2);
             n_sources_tdoa = size(measurements,1); % excludes the reference source
@@ -88,7 +133,7 @@ classdef LocationEstimator
             eps_bisec=1e-9;
             ue_loc_calc_IRWSRDLS=zeros(dim,n_ues);
             for i=1:n_ues
-                ue_loc_calc_IRWSRDLS(:,i)=LocationEstimator.estimateLocationIRWSRDLS_One(obj.Xenb(:,2:n_sources_tdoa+1)...
+                ue_loc_calc_IRWSRDLS(:,i)=obj.estimateLocationIRWSRDLS_One(obj.Xenb(:,2:n_sources_tdoa+1)...
                     ,measurements(:,i),Iter_max,eps_wls,eps_bisec);
             end
             estimatedLocationIRWSRDLS=ue_loc_calc_IRWSRDLS;
@@ -97,7 +142,7 @@ classdef LocationEstimator
     
     methods (Static)
         function x = estimateLocationIRWSRDLS_One(Am,dn,Kmax,epsi1,epsi)
-            xk = LocationEstimator.srd_ls(Am,dn,epsi);
+            xk = DiverseLocationEstimator.srd_ls(Am,dn,epsi);
             C = [eye(2) zeros(2,1); zeros(1,2) -1];
             m = size(Am,2);
             err = 10; %Starting error
@@ -201,7 +246,6 @@ classdef LocationEstimator
             end
             x = xk;
         end
-        
         
         function x= srd_ls(Am,dn,epsi)
             m = size(Am,2);
