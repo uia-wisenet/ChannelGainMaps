@@ -46,7 +46,11 @@ classdef Simulator2
                 [ind_row, ind_col] = ind2sub(size(m_grid_x), ind_gridPoint);
                 t4_nps(:,:,ind_row, ind_col) = ...
                     obj.generator.calculateImpulse_Resp(...
+                    [m_grid_x(ind_gridPoint), m_grid_y(ind_gridPoint)]);               
+                m_nps_now = obj.generator.calculateImpulse_Resp2(...
                     [m_grid_x(ind_gridPoint), m_grid_y(ind_gridPoint)]);
+                vecnorm(m_nps_now-t4_nps(:,:,ind_row, ind_col))
+                keyboard
                 ltc.go(ind_gridPoint);
             end
             % Add noise:            
