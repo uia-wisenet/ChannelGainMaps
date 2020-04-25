@@ -2,8 +2,9 @@ classdef LocationEstimator_tdoa
     % Superclass for all Location Estimators relying on TDoA measurements
     
     properties
-        Xenb % 2xN-matrix containing the source positions as column 2-vectors. 
-        %The reference source is in column 1.
+        Xenb % 2xN-matrix containing the source positions 
+        % as column 2-vectors. 
+        % The reference source is in column 1.
         inParallel = 0
     end
     
@@ -27,14 +28,17 @@ classdef LocationEstimator_tdoa
             M = size(m_measurements, 2);
             m_estimatedLocations = zeros(2, M);
             if obj.inParallel
+                disp('running in parallel.')
                 parfor m = 1:M
                     m_estimatedLocations(:,m) = obj.estimateOneLocation(...
                         m_measurements(:, m)); %#ok<PFBNS>
                 end
             else
+                ltc = LoopTimeControl(M);
                 for m = 1:M
                     m_estimatedLocations(:,m) = obj.estimateOneLocation(...
                         m_measurements(:, m));
+                    ltc.go(m);
                 end
             end
         end
