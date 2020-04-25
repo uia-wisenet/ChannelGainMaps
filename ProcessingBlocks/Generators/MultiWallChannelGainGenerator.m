@@ -974,12 +974,15 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                                 % check the validity of the first projection being on the wall
                             end % if Tx.secondReflecWallj ~= Tx.xyz
                         end % for k = size(Tx.secondReflecWallj.xyz,1)
+                        %% these lines were added by Yves, and later modified by Luismi
                         if isnan(TxSecondRef2Rx.dist)
                             secondOrderReflec(j)=0;
+                            Rx.SeconReflWallJCG(j) = 0; % added by Luismi
                         else
                             secondOrderReflec(j)=TxSecondRef2Rx.dist;
+                            Rx.SeconReflWallJCG(j) = sum(Rx.SecondReflWallKCG); % Luismi moved this from 2 lines below
                         end
-                        Rx.SeconReflWallJCG(j) = sum(Rx.SecondReflWallKCG);
+                 
                     end % for j = 1:size(Tx.secondReflecWallj.xyz,3)
                     Rx.SecondRefCG(i,1) = sum(Rx.SeconReflWallJCG);
                 end % for i = 1:size(Rx.xyz,1)
