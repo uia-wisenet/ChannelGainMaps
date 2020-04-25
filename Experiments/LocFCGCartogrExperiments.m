@@ -961,7 +961,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             y_wall_file_name='./modelFiles/y_coord_4walls.mat';
             selectedWalls=2:3;
            
-            gridSize = [5 5]; % 20 20
+            gridSize = [20 20]; % 20 20
             carrier_frequency = 800e6;
             receiverBandwidth = 20e6;
             maxSamplesPerPilot = 10;
@@ -993,7 +993,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             % myBiasErrorSim.features = 1:size(combnk(1:numberOfSources,2),1);
             % we could move .baselineGenerator to the Simulator[2] class
             myBiasErrorSim.sampler = SpectrumMapSampler;
-            myBiasErrorSim.sampler.pilotNoiseSTD = 0.1e-5;
+            myBiasErrorSim.sampler.pilotNoiseSTD = 0.3e-5;
             myBiasErrorSim.sampler.powerNoiseSTD = 0.5;
             myBiasErrorSim.sampler.maxSamplesPerPilot=10;
             %myBiasErrorSim.PCAenable=obj.PCAenabler;
