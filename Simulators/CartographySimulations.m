@@ -62,6 +62,8 @@ classdef CartographySimulations
         parGamma %parameter used in the kernel of missing features: low rank and missing data
         randomized_pairs = 1;
         
+        b_new_call = 0;
+        
     end
     
     
@@ -83,7 +85,19 @@ classdef CartographySimulations
     
     methods
         function [generator, source_loc] = baselineGenerator(obj, selectedWalls, x_wall_file_name, y_wall_file_name)
-            
+            warning('Using CartographySimulations.baselineGenerator, which is deprecated.')
+            warning('This call can be substituted with baselineGenerator2')
+            if obj.b_new_call
+                generator_template =  MultiWallChannelGainGenerator;
+                generator_template.f = obj.f;
+                generator_template.sampling_period = 1/obj.receiverBandwidth;
+                generator_template.maxSamplesPerPilot = obj.maxSamplesPerPilot;
+                generator = baselineGenerator2(selectedWalls, x_wall_file_name,...
+                     y_wall_file_name, obj.gridSize, generator_template);
+                 
+                source_loc = [generator.xt_loc; generator.yt_loc];
+                return
+            end
             generator = MultiWallChannelGainGenerator;
             
             generator.boundary=[
