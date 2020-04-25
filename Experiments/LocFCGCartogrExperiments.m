@@ -961,40 +961,61 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             y_wall_file_name='./modelFiles/y_coord_4walls.mat';
             selectedWalls=2:3;
            
-            gridSize = [20 20];
-            
-            c = CartographySimulations; % we should be able to remove
-            % this object from here
-            c.f = 800e6;
-            c.gridSize = gridSize;
-            c.receiverBandwidth = 20e6;
+            gridSize = [5 5]; % 20 20
+            carrier_frequency = 800e6;
+            receiverBandwidth = 20e6;
+            maxSamplesPerPilot = 10;
             
             myBiasErrorSim = BiasErrorSimulator;
-            [myBiasErrorSim.generator, source_loc] = c.baselineGenerator(...
-                selectedWalls, x_wall_file_name, y_wall_file_name);
-            myBiasErrorSim.generator.maxSamplesPerPilot = 10;
+           
+%             c = CartographySimulations; % we should be able to remove
+%             % this object from here
+%             c.f = carrier_frequency;
+%             c.gridSize = gridSize;
+%             c.receiverBandwidth = receiverBandwidth;
+%             c.b_new_call = 1;
+%             
+%             [myBiasErrorSim.generator, source_loc] = c.baselineGenerator(...
+%                 selectedWalls, x_wall_file_name, y_wall_file_name);
+%             myBiasErrorSim.generator.maxSamplesPerPilot = 10;
+            
+            generator_tmp = MultiWallChannelGainGenerator;
+            generator_tmp.f = carrier_frequency;
+            generator_tmp.sampling_period = 1/receiverBandwidth;
+            generator_tmp.maxSamplesPerPilot = maxSamplesPerPilot;
+            [myBiasErrorSim.generator, m_source_loc] = baselineGenerator2(...
+                selectedWalls, x_wall_file_name, y_wall_file_name, ...
+                gridSize, generator_tmp);
+            
+%             assert(isequal(generator2, myBiasErrorSim.generator))
+%             keyboard
             
             % myBiasErrorSim.features = 1:size(combnk(1:numberOfSources,2),1);
             % we could move .baselineGenerator to the Simulator[2] class
             myBiasErrorSim.sampler = SpectrumMapSampler;
-            myBiasErrorSim.sampler.pilotNoiseSTD = 0e-5;
+            myBiasErrorSim.sampler.pilotNoiseSTD = 0.1e-5;
             myBiasErrorSim.sampler.powerNoiseSTD = 0.5;
             myBiasErrorSim.sampler.maxSamplesPerPilot=10;
             %myBiasErrorSim.PCAenable=obj.PCAenabler;
+            
             myBiasErrorSim.featureExtractor = FeatureExtractor;
             myBiasErrorSim.featureExtractor.sampling_period = myBiasErrorSim.generator.sampling_period;
         
             myBiasErrorSim.locEstimator = WangLocationEstimator;
+            myBiasErrorSim.locEstimator.inParallel = 1;
             
-            myBiasErrorSim.locEstimator.Xenb = source_loc;
+            myBiasErrorSim.locEstimator.Xenb = m_source_loc;
       
             % define grid:
+            % TODO: can be moved to the BiasErrorSimulator.simulate method
             [m_grid_x, m_grid_y] = ndgrid(...
                 linspace(myBiasErrorSim.generator.x2,          myBiasErrorSim.generator.x1,           myBiasErrorSim.generator.n_gridpoints_x), ...
                 linspace(myBiasErrorSim.generator.y_limits(1), myBiasErrorSim.generator.y_limits(2),  myBiasErrorSim.generator.n_gridpoints_y));
            
             disp 'Running only one experiment (no monte carlo yet)'
-            [featDiff, ~] = myBiasErrorSim.simulate(m_grid_x, m_grid_y);
+            [featDiff, ~, m_trueTDoAs, m_allLocBasedFeatures, ...
+                m_estim_loc_tm_rx, m_trueLoc_all_points] =...
+                myBiasErrorSim.simulate(m_grid_x, m_grid_y);
             
             %% Plot the histogram and CDF of the feature difference
             figure(999); clf           
@@ -1010,6 +1031,25 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                 xlabel '|d - r|'
                 ylabel cdf
             F(2) = GFigure.captureCurrentFigure();
+            
+            figure(997); clf
+                scatter(m_allLocBasedFeatures(:), m_trueTDoAs(:));
+                xlabel 'Estimated TDoA from xcorr'
+                ylabel 'True TDoA'
+                
+            F(3) = GFigure.captureCurrentFigure();
+            
+            v_err_loc = norms(m_estim_loc_tm_rx - m_trueLoc_all_points);
+            rms(v_err_loc)
+            %histogram(v_err_loc)
+
+            figure(996); clf 
+                for i = 1:size(m_estim_loc_tm_rx, 2)
+                    plot([m_estim_loc_tm_rx(1, i) m_trueLoc_all_points(1,i)],...
+                         [m_estim_loc_tm_rx(2, i) m_trueLoc_all_points(2,i)])
+                     hold on
+                end
+            F(4) = GFigure.captureCurrentFigure();
         end
            
     end
