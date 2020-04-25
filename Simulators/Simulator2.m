@@ -47,10 +47,6 @@ classdef Simulator2
                 t4_nps(:,:,ind_row, ind_col) = ...
                     obj.generator.calculateImpulse_Resp(...
                     [m_grid_x(ind_gridPoint), m_grid_y(ind_gridPoint)]);               
-                m_nps_now = obj.generator.calculateImpulse_Resp2(...
-                    [m_grid_x(ind_gridPoint), m_grid_y(ind_gridPoint)]);
-                vecnorm(m_nps_now-t4_nps(:,:,ind_row, ind_col))
-                keyboard
                 ltc.go(ind_gridPoint);
             end
             % Add noise:            
@@ -69,7 +65,7 @@ classdef Simulator2
                 t3_reshaped_receivedPS); %Time differences of arrival
             
             %% this section can be refactored by defining a static method
-            channelForPairsTr=zeros(1,N_pair_train);
+            channelForPairsTr_noiseless=zeros(1,N_pair_train);
             n_sp_CoM  = size(t_allLocFreeFeatures,  1); % no. of source pairs
             n_sp_TDoA = size(t_allLocBasedFeatures, 1); % no. of source pairs
             trueLoc_train  = zeros([2, size(m_train_pairs)]);
@@ -83,7 +79,7 @@ classdef Simulator2
                 ind_rx = m_train_pairs(ind_pair, 2);
                 xy_transmitter = [m_grid_x(ind_tx), m_grid_y(ind_tx)];
                 xy_receiver    = [m_grid_x(ind_rx), m_grid_y(ind_rx)];
-                channelForPairsTr(ind_pair) = ...
+                channelForPairsTr_noiseless(ind_pair) = ...
                     obj.generator.calculateCGBetween(...
                     xy_transmitter, xy_receiver);
                 locFreeFeatures_train(:, ind_pair, :) = ...
@@ -95,8 +91,9 @@ classdef Simulator2
                 ltc.go(ind_pair);
             end
             % add noise:
-            channelForPairsTr = channelsForPairsTr + obj.sampler.powerNoiseSTD* ...
-                randn(size(channelsforPairsTr));
+            channelForPairsTr = channelForPairsTr_noiseless + ...
+                obj.sampler.powerNoiseSTD* ...
+                randn(size(channelForPairsTr_noiseless));
             
             channelForPairs_tracemap = zeros(1, N_pair_tracemap); 
             trueLoc_tracemap  = zeros([2, size(m_tracemap_pairs)]);
