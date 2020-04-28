@@ -726,10 +726,10 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             
             %%
             disp 'Running only one experiment (no monte carlo yet)'
-            [NMSE_locFree, NMSE_locBased, ~, ...
-                locFreeMapEstimate, locBasedMapEstimate, ~, ...
-                trueGains] = mySim.simulate(...
+            [str_NMSE, str_mapEstimates, trueGains] = mySim.simulate(...
                 m_train_pairs, m_tracemap_pairs, m_grid_x, m_grid_y);
+            locFreeMapEstimate  = str_mapEstimates.locFree;
+            locBasedMapEstimate = str_mapEstimates.locBased;
             
             M_trueMap = create_animation2([m_tracemap_pairs trueGains' ],  ...
                 gridSize(1), gridSize(2), 'trueMap' );
@@ -839,10 +839,10 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             
             %%
             disp 'Running only one experiment (no monte carlo yet)'
-            [NMSE_locFree, NMSE_locBased,~, locFreeMapEstimate,...
-                locBasedMapEstimate, ~,...
-                trueGains] = mySim.simulate(...
+            [str_NMSE, str_mapEstimates, trueGains] = mySim.simulate(...
                 m_train_pairs, m_tracemap_pairs, m_grid_x, m_grid_y);
+            locFreeMapEstimate  = str_mapEstimates.locFree;
+            locBasedMapEstimate = str_mapEstimates.locBased;
             
             M_trueMap = create_animation2([m_tracemap_pairs trueGains' ],  ...
                 gridSize(1), gridSize(2), 'trueMap' );
@@ -952,14 +952,12 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
         % plot histograms of the difference between range diff and
         % LocBasedFeatures
         function F = experiment_304(obj, niter)
-            % simulation using the simplified simulator class (Simulator2)
-            % Same inputs as exp 203
             
             rng(1)
             
             x_wall_file_name='./modelFiles/x_coord_4walls.mat';
             y_wall_file_name='./modelFiles/y_coord_4walls.mat';
-            selectedWalls=2:3;
+            selectedWalls=1:4;
            
             gridSize = [20 20]; % 20 20
             carrier_frequency = 800e6;
@@ -986,6 +984,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             [myBiasErrorSim.generator, m_source_loc] = baselineGenerator2(...
                 selectedWalls, x_wall_file_name, y_wall_file_name, ...
                 gridSize, generator_tmp);
+            myBiasErrorSim.generator.delay_estimation_offset = 2*rand;
             
 %             assert(isequal(generator2, myBiasErrorSim.generator))
 %             keyboard
@@ -1002,6 +1001,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             myBiasErrorSim.featureExtractor.sampling_period = myBiasErrorSim.generator.sampling_period;
         
             myBiasErrorSim.locEstimator = WangLocationEstimator;
+            myBiasErrorSim.locEstimator.param_rho = 10;
             myBiasErrorSim.locEstimator.inParallel = 1;
             
             myBiasErrorSim.locEstimator.Xenb = m_source_loc;
@@ -1052,6 +1052,225 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             F(4) = GFigure.captureCurrentFigure();
         end
            
+        % plot histograms of the difference between range diff and
+        % LocBasedFeatures
+        % same as 304, but using ARSRobustLocationEstimator
+        function F = experiment_305(obj, niter)
+            
+            rng(1)
+            
+            x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+            y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+            selectedWalls=1:4;
+           
+            gridSize = [20 20]; % 20 20
+            carrier_frequency = 800e6;
+            receiverBandwidth = 20e6;
+            maxSamplesPerPilot = 10;
+            
+            myBiasErrorSim = BiasErrorSimulator;
+           
+%             c = CartographySimulations; % we should be able to remove
+%             % this object from here
+%             c.f = carrier_frequency;
+%             c.gridSize = gridSize;
+%             c.receiverBandwidth = receiverBandwidth;
+%             c.b_new_call = 1;
+%             
+%             [myBiasErrorSim.generator, source_loc] = c.baselineGenerator(...
+%                 selectedWalls, x_wall_file_name, y_wall_file_name);
+%             myBiasErrorSim.generator.maxSamplesPerPilot = 10;
+            
+            generator_tmp = MultiWallChannelGainGenerator;
+            generator_tmp.f = carrier_frequency;
+            generator_tmp.sampling_period = 1/receiverBandwidth;
+            generator_tmp.maxSamplesPerPilot = maxSamplesPerPilot;
+            [myBiasErrorSim.generator, m_source_loc] = baselineGenerator2(...
+                selectedWalls, x_wall_file_name, y_wall_file_name, ...
+                gridSize, generator_tmp);
+            myBiasErrorSim.generator.delay_estimation_offset = 2*rand;
+            
+%             assert(isequal(generator2, myBiasErrorSim.generator))
+%             keyboard
+            
+            % myBiasErrorSim.features = 1:size(combnk(1:numberOfSources,2),1);
+            % we could move .baselineGenerator to the Simulator[2] class
+            myBiasErrorSim.sampler = SpectrumMapSampler;
+            myBiasErrorSim.sampler.pilotNoiseSTD = 0.3e-5;
+            myBiasErrorSim.sampler.powerNoiseSTD = 0.5;
+            myBiasErrorSim.sampler.maxSamplesPerPilot=10;
+            %myBiasErrorSim.PCAenable=obj.PCAenabler;
+            
+            myBiasErrorSim.featureExtractor = FeatureExtractor;
+            myBiasErrorSim.featureExtractor.sampling_period = myBiasErrorSim.generator.sampling_period;
+        
+            myBiasErrorSim.locEstimator = ARSRobustLocationEstimator;
+            myBiasErrorSim.locEstimator.param_rho = 10;
+            myBiasErrorSim.locEstimator.inParallel = 0; %! for debugging
+            
+            myBiasErrorSim.locEstimator.Xenb = m_source_loc;
+      
+            % define grid:
+            % TODO: can be moved to the BiasErrorSimulator.simulate method
+            [m_grid_x, m_grid_y] = ndgrid(...
+                linspace(myBiasErrorSim.generator.x2,          myBiasErrorSim.generator.x1,           myBiasErrorSim.generator.n_gridpoints_x), ...
+                linspace(myBiasErrorSim.generator.y_limits(1), myBiasErrorSim.generator.y_limits(2),  myBiasErrorSim.generator.n_gridpoints_y));
+           
+            disp 'Running only one experiment (no monte carlo yet)'
+            [featDiff, ~, m_trueTDoAs, m_allLocBasedFeatures, ...
+                m_estim_loc_tm_rx, m_trueLoc_all_points] =...
+                myBiasErrorSim.simulate(m_grid_x, m_grid_y);
+            
+            %% Plot the histogram and CDF of the feature difference
+            figure(999); clf           
+                nbins = 100;
+                [counts, bins] = hist(vec(abs(featDiff)), nbins);
+                histogram(vec(abs(featDiff)), nbins);
+                xlabel '|d - r|'
+                ylabel count
+                hold on
+            F = GFigure.captureCurrentFigure();
+            figure(998); clf
+                plot(bins, cumsum(counts)/sum(counts));
+                xlabel '|d - r|'
+                ylabel cdf
+            F(2) = GFigure.captureCurrentFigure();
+            
+            figure(997); clf
+                scatter(m_allLocBasedFeatures(:), m_trueTDoAs(:));
+                xlabel 'Estimated TDoA from xcorr'
+                ylabel 'True TDoA'
+                
+            F(3) = GFigure.captureCurrentFigure();
+            
+            v_err_loc = norms(m_estim_loc_tm_rx - m_trueLoc_all_points);
+            rms(v_err_loc)
+            %histogram(v_err_loc)
+
+            figure(996); clf 
+                for i = 1:size(m_estim_loc_tm_rx, 2)
+                    plot([m_estim_loc_tm_rx(1, i) m_trueLoc_all_points(1,i)],...
+                         [m_estim_loc_tm_rx(2, i) m_trueLoc_all_points(2,i)])
+                     hold on
+                end
+            F(4) = GFigure.captureCurrentFigure();
+        end
+        
+        function F = experiment_4010(obj, niter)
+            % copied from exp 302.
+            
+            rng(1)
+            
+            x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+            y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+            selectedWalls=2:4; %!
+            
+            kernelSigmaLF = 69;
+            kernelSigmaLB = 35;
+            lambdaLF      = 1e-3;
+            lambdaLB      = 1e-3;
+        
+            gridSize = [20 20]; % 20 20 
+            N_pair_train = 100;
+            N_pair_test  = 100;
+            
+            mySim = Simulator2; 
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_syntheticLocError = 1;
+            
+            %% this section was adapted from 304 
+            % (removal of CartographySimulations)
+            
+            carrier_frequency = 800e6;
+            receiverBandwidth = 20e6;
+            maxSamplesPerPilot = 10;
+            
+            generator_tmp = MultiWallChannelGainGenerator;
+            generator_tmp.f = carrier_frequency;
+            generator_tmp.sampling_period = 1/receiverBandwidth;
+            generator_tmp.maxSamplesPerPilot = maxSamplesPerPilot;
+            [mySim.generator, m_source_loc] = baselineGenerator2(...
+                selectedWalls, x_wall_file_name, y_wall_file_name, ...
+                gridSize, generator_tmp);
+            mySim.generator.delay_estimation_offset = 2*rand;
+           
+            %%
+            % mySim.features = 1:size(combnk(1:numberOfSources,2),1);
+            % we could move .baselineGenerator to the Simulator[2] class
+            mySim.sampler = SpectrumMapSampler;
+            mySim.sampler.pilotNoiseSTD = 1e-5;
+            mySim.sampler.powerNoiseSTD = 0.5;
+            mySim.sampler.maxSamplesPerPilot=10;
+            %mySim.PCAenable=obj.PCAenabler;
+            mySim.featureExtractor = FeatureExtractor;
+            mySim.featureExtractor.sampling_period = mySim.generator.sampling_period;
+            
+            mySim.b_cv = 1;
+            
+            mySim.locFreeEstimator = LocationFreeEstimator;
+            mySim.locFreeEstimator.kernel = @(x, y) ...
+                exp(-norms(x-y, 2, 1).^2/(kernelSigmaLF^2));
+            mySim.locFreeEstimator.regularizationParameter = lambdaLF;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            
+            mySim.locBasedEstimator = LocationBasedEstimator;
+            mySim.locEstimator = WangLocationEstimator;
+            mySim.locBasedEstimator.kernel = @(x, y) ...
+                exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
+            mySim.locBasedEstimator.regularizationParameter = lambdaLB;
+            mySim.locBasedEstimator.locationNoiseSTD = []; %?
+            mySim.locBasedEstimator.Xenb = m_source_loc;
+            
+            mySim.locEstimator.Xenb = m_source_loc;
+            
+            mySim.hybridEstimator = HybridEstimator;
+            mySim.hybridEstimator.b_debugPlots = 1;
+            mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+            mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
+            mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
+            mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
+            
+            % The original CartographySimulations has several lines here to
+            % define the number of different monte carlo runs and define the
+            % random parameters or each MC run
+            
+            % define grid:
+            [m_grid_x, m_grid_y] = ndgrid(...
+                linspace(mySim.generator.x2,          mySim.generator.x1,           mySim.generator.n_gridpoints_x), ...
+                linspace(mySim.generator.y_limits(1), mySim.generator.y_limits(2),  mySim.generator.n_gridpoints_y));
+            
+            %% train and evaluation(traceMap) pairs
+            combin_pairs  = combnk(1:gridSize(1)*gridSize(2),2);
+            v_indices_train_test = randperm(size(combin_pairs, 1), N_pair_train + N_pair_test);
+            m_train_pairs = combin_pairs(v_indices_train_test(1:N_pair_train),:);
+            m_test_pairs  = combin_pairs(v_indices_train_test(N_pair_train+(1:N_pair_test)),:);
+                        
+            %%
+            disp 'Running only one experiment (no monte carlo yet)'
+            [str_NMSE, str_mapEstimates, trueGains] = mySim.simulate(...
+                m_train_pairs, m_test_pairs, m_grid_x, m_grid_y);
+            str_NMSE
+            
+%             M_trueMap = create_animation2([m_tracemap_pairs trueGains' ],  ...
+%                 gridSize(1), gridSize(2), 'trueMap' );
+%             M_locFree = create_animation2([m_tracemap_pairs locFreeMapEstimate' ],...
+%                 gridSize(1), gridSize(2), 'locFree' );
+%             M_locBased = create_animation2([m_tracemap_pairs locBasedMapEstimate' ],...
+%                 gridSize(1), gridSize(2), 'locBased' );
+% %             M_hybrid = create_animation2([m_tracemap_pairs hybridMapEstimate' ],...
+% %                 gridSize(1), gridSize(2), 'hybrid' );             
+%             M = create_animation3([m_tracemap_pairs trueGains' locFreeMapEstimate' ...
+%                 locBasedMapEstimate' ], gridSize(1), gridSize(2), ...
+%                 {'True', 'LocFree', 'LocBased'}, 's40x40') %hybridMapEstimate'  , 'hybrid'
+%             NMSE_locFree
+%             NMSE_locBased
+% %             NMSE_hybrid
+            F = GFigure.captureCurrentFigure;
+        end
+
+
     end
     
     
