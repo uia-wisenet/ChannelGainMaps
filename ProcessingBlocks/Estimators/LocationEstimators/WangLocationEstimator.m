@@ -5,7 +5,7 @@ classdef WangLocationEstimator < LocationEstimator_tdoa
         % 2xN-matrix containing the source positions(reference source in
         % column 1)
                 
-        rho=10 % rho: upper bound on the NLOS bias
+        param_rho=10 % rho: upper bound on the NLOS bias
         % This is a robust location estimator
         
     end
@@ -48,7 +48,7 @@ classdef WangLocationEstimator < LocationEstimator_tdoa
             end
             % Call method implemented by Gang Wang, see original file:
             % sdp_ce.m
-            y= sdp_ce(obj.Xenb, v_d, b, n_sources, obj.rho, a_);
+            y= sdp_ce(obj.Xenb, v_d, b, n_sources, obj.param_rho, a_);
             v_estimatedLocation = y(1:2);
             % v_r_out = y(3:end);
             
