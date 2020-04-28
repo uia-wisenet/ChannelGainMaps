@@ -74,7 +74,7 @@ classdef LocationBasedEstimator < Estimator
             intercept = mean(channelMeasurements);
             channelMeasurements=channelMeasurements- intercept;
             
-            coefficientsOut=(Ke1+((n_ues*obj.regularizationParameter)*eye(n_ues)))\channelMeasurements';
+            coefficientsOut=(Ke1+((n_ues*obj.regularizationParameter)*eye(n_ues)))\channelMeasurements(:);
         end
         
         function predictedMeasurements = estimate(obj, coefficients, trainingLocations, estimatedLocationVal,intercept)

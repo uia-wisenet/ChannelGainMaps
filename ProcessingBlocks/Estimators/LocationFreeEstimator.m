@@ -21,7 +21,9 @@ classdef LocationFreeEstimator < Estimator
     
     methods
         function [coefficientsOut, intercept,ues_many_misses,...
-                avgNumberOfMissingFeat,combin_sources,orthBasis,meanFeature,featCovarianceMat,completedmeasurements] = train(obj, LocFeatures,...
+                avgNumberOfMissingFeat,combin_sources,orthBasis,...
+                meanFeature,featCovarianceMat,completedmeasurements] ...
+                = train(obj, LocFeatures,...
                 channelForPairs)
             % given a 3D tensor including the locF features (M-by-N-by-2 array
             % where M is the number of features at one sensor location,
@@ -105,7 +107,13 @@ classdef LocationFreeEstimator < Estimator
                 n_ues=size(completedmeasurements,2);
                 LocFeatures(:,ues_many_misses)=[];
             else
-                ues_many_misses=[];avgNumberOfMissingFeat=0;combin_sources=0;orthBasis=0;meanFeature=0;featCovarianceMat=0;completedmeasurements=0;
+                ues_many_misses=[];
+                avgNumberOfMissingFeat=0;
+                combin_sources=0;
+                orthBasis=0;
+                meanFeature=0;
+                featCovarianceMat=0;
+                completedmeasurements=0;
             end
             
             Ke1=zeros(n_ues,n_ues); % Kernel matrix
@@ -180,13 +188,12 @@ classdef LocationFreeEstimator < Estimator
 %             keyboard
             intercept = mean(channelForPairs);
             channelForPairs=channelForPairs-intercept;
-            coefficientsOut=(Ke1+((n_ues*obj.regularizationParameter)*eye(n_ues)))\channelForPairs';
+            coefficientsOut=(Ke1+((n_ues*obj.regularizationParameter)*eye(n_ues)))\channelForPairs(:);
             % NOTE: the previous 3 lines were inside the for loop before. 
             % This was unnecessary and I guess it was slowing down the code.
         end
-        
-        
-        function [meanErrOnEvalFeat,predictedMeasurements] = estimateGivenEstimatedDistances(obj, coefficients, extractedLocfreeFeaturesToConsider,trainingMeasurements,completedmeasurements,...
+               
+        function [predictedMeasurements, meanErrOnEvalFeat] = estimateGivenEstimatedDistances(obj, coefficients, extractedLocfreeFeaturesToConsider,trainingMeasurements,completedmeasurements,...
                 test_locF_features,combin_sources,orthBasis,avgPower, meanFeat,CovarMat)
             % Estimate channel gain using Location Free cartography.
             % Inputs: test_locF_features M-by-N-by-2 array
