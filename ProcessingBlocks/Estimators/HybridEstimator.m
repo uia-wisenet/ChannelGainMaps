@@ -9,16 +9,20 @@ classdef HybridEstimator < Estimator
         h_kernelLB % function handle defining the LF kernel
         regularizationParameterLF % lambda for LocFree machine  (KRR)
         regularizationParameterLB % lambda for LocBased machine (KRR)
-        max_itrs_alternating =40;
+        max_itrs_alternating =20;
+        b_verbose = 0;
+        b_debugPlots = 0;
 
     end
     
     methods
-        function [m_coefsOut, intercept, v_d_out] = train(obj, ...
-                t_locFeatures, t_estimatedLocation, t_locErrors, v_channelForPairs)
+        function [v_coefficients_LF, v_coefficients_LB, intercept, wcu] ...
+                = train(obj, t_locFeatures, t_estimatedLocation, ...
+                m_locErrors, v_channelForPairs)
             % Train hybrid Channel-gain estimator.
             
-            % GIVEN:    locF features, estimated locations, and 
+            % GIVEN:    locF features, estimated locations, and channel
+            %           gains
             % OPTIMIZE: the coefficients of the kernel machines used by the
             %           hybrid estimator of the channel gain (as a linear 
             %           combination of the outputs of the latter machines)
@@ -28,98 +32,161 @@ classdef HybridEstimator < Estimator
             %               (where M is the number of features at one
             %               sensor location, N is the number of pairs 
             %               for training, and 2 stands for pair)
-            % t_estimatedLocation: 2xN-matrix containing the estimated
+            % t_estimatedLocation: DxNx2-tensor containing the estimated
             %               locations (from a LocationEstimator) for each
-            %               training pair
+            %               training pair -- D is space dim: either 2 or 3
+            % t_locErrors:  Nx2-matrix containing the uncertainty (error)
+            %               measure for the estimated location
             % v_channelForPairs: N-vector containing channel gain for each 
             %               training pair
             
-            % Outputs:
-            % m_coefsOut: Nx2 matrix containing the coefficients resulting
-            %             from training (N = number of training pairs, 2 
-            %             stands for the two machines (location-based and
-            %             location-free)
-            % intercept:  scalar intercept (mean of training channel gains)
-            % v_d_diag:   N-vector containing coefficients at the diagonal 
+            % Outputs: 
+            % v_coefficients_LF: N-vector containing the LocFree
+            %               coefs resulting from training 
+            % v_coefficients_LB: N-vector containing the LocBased
+            %               coefs resulting from training
+            % intercept: scalar intercept (mean of training channel gains)
+            % v_d_out:   N-vector containing coefficients at the diagonal 
             %             of matrix D (optimal weights for the linear 
             %             combination at the training points 
             
             %%
             % Dimensionalities and coherence check
+            assert(iscolumn(v_channelForPairs));
             n_ues= length(v_channelForPairs); % number of (training) UEs
             d = size(t_estimatedLocation, 1); % dim. of location vectors
             assert(d==2 || d==3);             % 2D or 3D location
             assert(size(t_estimatedLocation, 2)==n_ues);
+            assert(size(t_estimatedLocation, 3)==2);%2 stands for pair
+            assert(size(t_locFeatures, 2)==n_ues);
+            assert(size(t_locFeatures, 3)==2); %2 stands for pair
+            assert(isequal(size(m_locErrors), [n_ues, 2]));
             
             disp('Building kernel matrices row by row')
-            m_Ke_p = zeros(n_ues, n_ues);
-            m_Ke_l = zeros(n_ues, n_ues);           
-            ltc = LoopTimeControl(n_ues);
-            for ind_ue = 1:n_ues
-                m_row_inputs_to_kernels = repmat([t_locFeatures(:, ind_ue, 1);...
-                    t_locFeatures(:,ind_ue,2)], [1 n_ues]);
-                m_row_inputs_to_kernels_2 = repmat([t_estimatedLocation(:, ind_ue, 1);...
-                    t_estimatedLocation(:,ind_ue,2)], [1 n_ues]);
-                
-                v_my_row = feval(obj.h_kernelLF, m_row_inputs_to_kernels, ...
-                    [t_locFeatures(:,:,1);t_locFeatures(:,:,2)]);
-                v_my_row_2 = feval(obj.h_kernelLB, m_row_inputs_to_kernels_2, ...
-                    [t_estimatedLocation(:,:,1);t_estimatedLocation(:,:,2)]);
-                m_Ke_p(ind_ue,:) = v_my_row;
-                m_Ke_l(ind_ue,:) = v_my_row_2;
-                ltc.go(ind_ue);
-            end
-            % keyboard %!
+            m_K_p = obj.buildKernelMatrixbyRows(...
+                obj.h_kernelLF, t_locFeatures,       obj.b_verbose);
+            m_K_l = obj.buildKernelMatrixbyRows(...
+                obj.h_kernelLB, t_estimatedLocation, obj.b_verbose);
+             %% section that will be commented out
+%             m_Ke_p = zeros(n_ues, n_ues);
+%             m_Ke_l = zeros(n_ues, n_ues);           
+%             ltc = LoopTimeControl(n_ues);
+%             for ind_ue = 1:n_ues
+%                 m_row_inputs_to_kernels = repmat([t_locFeatures(:, ind_ue, 1);...
+%                     t_locFeatures(:,ind_ue,2)], [1 n_ues]);
+%                 m_row_inputs_to_kernels_2 = repmat([t_estimatedLocation(:, ind_ue, 1);...
+%                     t_estimatedLocation(:,ind_ue,2)], [1 n_ues]);
+%                 
+%                 v_my_row = feval(obj.h_kernelLF, m_row_inputs_to_kernels, ...
+%                     [t_locFeatures(:,:,1);t_locFeatures(:,:,2)]);
+%                 v_my_row_2 = feval(obj.h_kernelLB, m_row_inputs_to_kernels_2, ...
+%                     [t_estimatedLocation(:,:,1);t_estimatedLocation(:,:,2)]);
+%                 m_Ke_p(ind_ue,:) = v_my_row;
+%                 m_Ke_l(ind_ue,:) = v_my_row_2;
+%                 ltc.go(ind_ue);
+%             end
+%             norm(m_K_p(:)-m_Ke_p(:))
+%             norm(m_K_l(:)-m_Ke_l(:))
+%             keyboard
+             %%
             intercept = mean(v_channelForPairs);
-            v_zm_channelForPairs=v_channelForPairs-intercept; % zero mean
+            v_zm_channelForPairs=v_channelForPairs(:)-intercept; % zero mean
             
             %% Alternating minimization 
-            % (matrix D and the kernel weights in \gamma: see document sent to Seung Jun)  
-            [~, indices_t] = sort(t_locErrors(1,:,1));
-            [~, indices_r] = sort(t_locErrors(1,:,2));
-            norm_dvect=zeros(1,obj.max_itrs_alternating);
-            norm_dvecr=zeros(1,obj.max_itrs_alternating);
-            v_d_t = rand(n_ues, 1);
-            v_d_r = rand(n_ues, 1);
+            % (matrix D and the kernel weights in \gamma: see document sent to Seung Jun) 
+            [v_locErrors_tmp, v_indices] = sort(m_locErrors(:));
+            %v_h_norm_dvect=zeros(1,obj.max_itrs_alternating);
+            %v_h_norm_dvecr=zeros(1,obj.max_itrs_alternating);
+            v_h_obj = zeros(1, obj.max_itrs_alternating);
+            v_d = linspace(0, 1, n_ues);
+            m_K_large = sparse(blkdiag(m_K_p, m_K_l));
+            lambda_p = obj.regularizationParameterLF;
+            lambda_l = obj.regularizationParameterLB;
+            m_Lambda = sparse(blkdiag(lambda_p*eye(n_ues), lambda_l*eye(n_ues))); 
                      
             ltc = LoopTimeControl(obj.max_itrs_alternating);
-            for ind_iters=1:obj.max_itrs_alternating  
-                % Minimization 1: Given v_d_diag, solve for kernel machine coefficients
-                v_coefficients_LF=((eye(n_ues)-(diag(v_d_t)+diag(v_d_r)))*m_Ke_p+((n_ues*obj.regularizationParameterLF)*eye(n_ues)))\v_zm_channelForPairs';
-                v_coefficients_LB=((diag(v_d_t)+diag(v_d_r))*m_Ke_l+((n_ues*obj.regularizationParameterLB)*eye(n_ues)))\v_zm_channelForPairs';
+            for ind_iters=1:obj.max_itrs_alternating 
+%                 v_h_norm_dvect(ind_iters)= norm(v_d_t);
+%                 v_h_norm_dvecr(ind_iters)= norm(v_d_r); %are these
+%                 needed?
+
+                % Minimization 1: Given v_d_diag, solve for 
+                % kernel machine coefficients
+                m_D = diag(v_d);
+                m_fat = [eye(n_ues)-m_D,  m_D];
+                m_toInvert = (m_fat'*m_fat)*m_K_large + n_ues*m_Lambda;
+                v_gamma = m_toInvert \ ...
+                    ( m_fat'* v_zm_channelForPairs);
+                v_coefficients_LF = v_gamma(1:n_ues);
+                v_coefficients_LB = v_gamma(n_ues+1:end);
+                
+                %% commented out (making sure the minimization is correct)
+%                 cvx_begin quiet
+%                   variables alpha_p(n_ues) alpha_l(n_ues)
+%                   minimize((1/n_ues) * sum_square( v_zm_channelForPairs ...
+%                       - (eye(n_ues)-m_D)*m_K_p*alpha_p ...
+%                       - m_D *m_K_l * alpha_l )...
+%                       + lambda_p*alpha_p'*m_K_p*alpha_p...
+%                       + lambda_l*alpha_l'*m_K_l*alpha_l)
+%                 cvx_end
+%                 norm([alpha_p;alpha_l]-v_gamma)/norm(v_gamma)
+%                 keyboard
                 
                 % Minimization 2: Given v_a and v_b, solve for v_d
-                v_b = m_Ke_l*v_coefficients_LB - m_Ke_p*v_coefficients_LF;
-                v_a = v_zm_channelForPairs'- m_Ke_p*v_coefficients_LF;
-                % d_vec = diag(b_vec)\a_vec; %?
-                % solve using CVX
-                cvx_begin quiet
-                    variable v_d_t(n_ues, 1);
-                    variable v_d_r(n_ues, 1);
-                    minimize(norm(v_a - (diag(v_b) * (v_d_t + v_d_r))));
-                    subject to
-                        0 <= v_d_t + v_d_r;
-                        v_d_t + v_d_r <= 1;
-                        v_d_t(indices_t(2:end)) >= v_d_t(indices_t(1:end-1));
-                        v_d_r(indices_r(2:end)) >= v_d_r(indices_r(1:end-1));        
-                cvx_end
+                v_a = v_zm_channelForPairs- m_K_p*v_coefficients_LF;
+                v_b = m_K_l*v_coefficients_LB - m_K_p*v_coefficients_LF;
+                [m_dt_dr, obj_value] = obj.fit_D_additive(v_a, v_b, ...
+                    v_indices);
+                v_d = m_dt_dr*[1;1]/2;
                 
-                % keeping track of the norm of v_d_diag
-                norm_dvect(ind_iters)= norm(v_d_t); %if this line 
-                norm_dvecr(ind_iters)= norm(v_d_r);
-                %  is needed, maybe it is better to move it to the beginning of the loop
+                %% section that will be commented out
+%                 % d_vec = diag(b_vec)\a_vec; %?
+%                 % solve using CVX
+%                 cvx_begin quiet
+%                     variable v_d_t2(n_ues, 1);
+%                     variable v_d_r2(n_ues, 1);
+%                     minimize(norm(v_a - (diag(v_b) * (v_d_t2 + v_d_r2))));
+%                     subject to
+%                         0 <= v_d_t2 + v_d_r2;
+%                         v_d_t2 + v_d_r2 <= 1;
+%                         v_d_t2(indices_t(2:end)) >= v_d_t2(indices_t(1:end-1));
+%                         v_d_r2(indices_r(2:end)) >= v_d_r2(indices_r(1:end-1));        
+%                 cvx_end
+%                 norm(v_d_t-v_d_t2)
+%                 norm(v_d_r-v_d_r2)
+%                 keyboard
+                %%
+                
+                v_h_obj(ind_iters) = obj_value.^2/n_ues ...
+                    + lambda_p* v_coefficients_LF'*m_K_p*v_coefficients_LF...
+                    + lambda_l* v_coefficients_LB'*m_K_l*v_coefficients_LB;
+                
+                if obj.b_debugPlots    
+                    figure(990); clf
+                    subplot(1, 3, 1);
+                    stem(v_gamma); ylabel \gamma
+                    subplot(1, 3, 2);
+                    plot(v_h_obj); xlabel 'iter index', ylabel 'objective val'
+                    subplot(1, 3, 3)
+                    plot(m_locErrors(v_indices), m_dt_dr(v_indices))
+                    xlabel 'e'
+                    ylabel '$\bar{g}$ (e)' interpreter latex
+                end
                 ltc.go(ind_iters);
             end
+            v_weights_tmp = m_dt_dr(v_indices);
+            wcu = AdditiveWeightCalculatingUnit;
+            % leave only unique entries:            
+            [wcu.v_locErrors, v_representers] = unique(v_locErrors_tmp);
+            wcu.v_weights = v_weights_tmp(v_representers);
 %%            
 %             plots (should be traced outside of the processing block)
-            close all
-            figure(4)
-            plot(norm_dvect+norm_dvecr,'b-o', 'LineWidth',2);   grid on
-            xlabel('Interation index k',  'Interpreter', 'latex')
-            ylabel('\boldmath $\vert\! \vert$ $\! d_t + d_r $ $\!\vert\!\vert$', 'Interpreter', 'latex')
+%             close all
+%             figure(4)
+%             plot(v_h_norm_dvect+v_h_norm_dvecr,'b-o', 'LineWidth',2);   grid on
+%             xlabel('Iteration index k',  'Interpreter', 'latex')
+%             ylabel('\boldmath $\vert\! \vert$ $\! d_t + d_r $ $\!\vert\!\vert$', 'Interpreter', 'latex')
             
-            v_d_out = v_d_t + v_d_r;
-            m_coefsOut = [v_coefficients_LF, v_coefficients_LB]; % \gamma
         end
         
         function predictedMeasurements = estimateGivenEstimatedDistancesAndLoc(obj, ...
@@ -177,6 +244,65 @@ classdef HybridEstimator < Estimator
                 end
                 
             end
+        end
+    end %methods
+    
+    methods(Static)
+        function [m_K] = buildKernelMatrixbyRows(...
+                h_kernel, t_features, b_verbose)
+            % Build kernel matrix, row by row.
+            % Given: 
+            %   - a function handle expressing the kernel function,
+            %   - an MxNx2 tensor with training feature vectors
+            %   - an optional verbosity flag
+            % Calculate:
+            %   - an NxN kernel matrix
+            if ~exist('b_verbose', 'var')
+                b_verbose = 0;
+            end
+            if b_verbose
+                disp('Building kernel matrices row by row')
+            end
+           
+            n_ues = size(t_features, 2);
+            assert(size(t_features, 3) == 2);
+            m_K = zeros(n_ues, n_ues); % Kernel matrix
+            
+            m_allFeatures = [t_features(:,:,1); t_features(:,:,2)];
+            
+            ltc = LoopTimeControl(n_ues);
+            for ind_ue = 1:n_ues
+                m_row_inputs_to_kernels = repmat(...
+                    [t_features(:, ind_ue, 1); t_features(:,ind_ue,2)], ...
+                        [1 n_ues]);                
+                v_my_row = feval(h_kernel, m_row_inputs_to_kernels, ...
+                    m_allFeatures);               
+                m_K(ind_ue,:) = v_my_row;
+                if b_verbose, ltc.go(ind_ue); end
+            end
+        end
+        
+        function [m_dt_dr, obj_value] ...
+                = fit_D_additive(v_a, v_b, v_indices)
+            % Given v_a and v_b, solve for v_d
+            
+            % d_vec = diag(b_vec)\a_vec; %?
+            % solve using CVX
+            
+            n_ues = length(v_a);
+            assert(length(v_b)==n_ues);
+            assert(length(v_indices)==2*n_ues);
+            
+            cvx_begin quiet
+              variable m_D(n_ues, 2)
+              minimize(  norm( v_a - (diag(v_b) * m_D*[1; 1]/2) )  );
+              subject to
+              0 <= m_D; %#ok<VUNUS>
+              m_D <= 1; %#ok<VUNUS>
+              m_D(v_indices(2:end)) <= m_D(v_indices(1:end-1)); %#ok<VUNUS>
+            cvx_end
+            m_dt_dr = m_D;
+            obj_value = cvx_optval;
         end
         
     end %methods
