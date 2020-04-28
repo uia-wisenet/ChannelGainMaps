@@ -43,13 +43,44 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
         
         b_verbose = 1
         
+        delay_estimation_offset = 0; % in sampling periods
+        % Luismi:in theory, adding a constant should not give very different results
+        
     end
     
     methods
-               
-        function H_D = calculateImpulse_Resp(obj, v_xy_rx)
+        
+        function plot_walls(obj)
+            v_X = obj.X;
+            v_Y = obj.Y;
+            assert(iscolumn(v_X))
+            assert(iscolumn(v_Y))
+            assert(length(v_X) == length(v_Y))
+            
+            n_walls = length(v_X)/2;
+            assert(n_walls==round(n_walls));
+            
+            t_walls = reshape([v_X v_Y] , [2, n_walls, 2]);
+            
+            for i_wall = 1:n_walls
+                m_wall = squeeze(t_walls(:, i_wall, :));
+                if not(all(m_wall==0))
+                    v_midpoint = (m_wall(1,:)+m_wall(2,:))/2;
+                    plot(m_wall(:,1), m_wall(:,2));
+                    hold on
+                    text(v_midpoint(1), v_midpoint(2), num2str(i_wall));
+                end
+            end
+        end
+        
+        function set_lims_to_plot(obj)
+           xlim(obj.boundary(1, 1:2));
+           ylim(obj.boundary(2, 1:2))
+        end
+        
+        function m_H_D = calculateImpulse_Resp(obj, v_xy_rx)
             n_sources=length(obj.xt_loc);
-            H_D=zeros(n_sources,obj.maxSamplesPerPilot);
+            m_H_D=zeros(n_sources,obj.maxSamplesPerPilot);
             for ind_source=1:n_sources
                 v_xy_tx = [obj.xt_loc(ind_source) obj.yt_loc(ind_source)];
                 [Rx, RxTx, firstOrderRef,  secondOrderReflec] = ...
@@ -71,13 +102,18 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                 %keyboard
                 %error 'TODO: add the transmit power of each source!'
                 
-                 h_D = sqrt(db2pow(obj.ptx_loc(ind_source))) * ...
-                    obj.digitalImpulseResponse(alpha_coeff, delays);
+                v_h_D = sqrt(db2pow(obj.ptx_loc(ind_source))) ...
+                    * obj.digitalImpulseResponse(alpha_coeff, ...
+                    delays+obj.delay_estimation_offset*obj.sampling_period);
                 
-                %%
-                H_D(ind_source, 1:length(h_D))=h_D; % Get the impulse responses from all sources
+                %% Get the impulse responses from all sources
+                if length(v_h_D) < obj.maxSamplesPerPilot
+                    m_H_D(ind_source, 1:length(v_h_D)) = v_h_D;
+                else
+                    m_H_D(ind_source, :) = v_h_D(1:obj.maxSamplesPerPilot);
+                end
             end
-            
+            %keyboard
         end
         
         function channel_gain = calculateCGBetween(obj, xt, xr)
