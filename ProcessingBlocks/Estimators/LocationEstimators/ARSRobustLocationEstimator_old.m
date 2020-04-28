@@ -1,14 +1,13 @@
-classdef ARSRobustLocationEstimator < LocationEstimator_tdoa
+classdef ARSRobustLocationEstimator_old
     %Averaging Reference Sources to obtain a Robust Location Estimate
 properties
     param_rho       % upper bound on the NLOS bias
 end
 
 methods
-    function [value, v_r] = computeValue(obj, v_x, v_d_in)
+    function [value, v_r] = computeValue(obj, v_x, v_d_in, m_s)
         % Given a point in space, range difference measurements, and
         % source positions, computes the objective value
-        m_s = obj.Xenb;
         N = size(m_s, 2);
         rho = obj.param_rho;
         assert(size(m_s, 1)==2);
@@ -34,7 +33,7 @@ methods
         value = mean(v_valueForRefSource);
     end
     
-    function m_map = valueMap(obj, m_grid_x1, m_grid_x2, v_d)
+    function m_map = valueMap(obj, m_grid_x1, m_grid_x2, v_d, m_s)
         % Given a grid of points as produced by meshgrid, returns a matrix 
         % containing the objective value for each point in the grid.
         
@@ -43,8 +42,7 @@ methods
         assert(isequal(size(m_grid_x1), size(m_grid_x2)), ...
             'size of grids not coherent')
         m_map = nan(size(m_grid_x1));
-        m_s = obj.Xenb;
-
+        
         ltc = LoopTimeControl(numel(m_map));
         for n = 1:numel(m_map)
             m_map(n) = obj.computeValue(...
@@ -54,17 +52,11 @@ methods
         
     end
     
-    function v_estimatedLocation = estimateOneLocation(obj, v_measurements)
-        v_estimatedLocation = obj.solveRelaxed(v_measurements);
-    end
-    
     function [v_x_hat, v_r_out, value] = solveRelaxed(obj, ...
-                v_d_in)
+                v_d_in, m_s)
         % Solve the convex relaxation of minimizing the cost function 
         % implemented by the method computeValue
-                
-        m_s = obj.Xenb;
-    
+            
         N = size(m_s, 2);
         rho = obj.param_rho;
         assert(size(m_s, 1)==2);
