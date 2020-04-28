@@ -143,7 +143,7 @@ classdef Simulator
                 my_locFreeTrainer.estimator = obj.locFreeEstimator;
                 [locFreeFKM, avgNumberOfMissingFeat] = my_locFreeTrainer.train(extractedLocfreeFeaturesToConsider,channelForPairsTr);
                 disp('Evaluating LocFree at validation set...')
-                [meanErrOnEvalFeat,locFreeMapEstimate] = locFreeFKM.evaluate(extractedLocfreeFeaturesToConsiderVal);
+                [locFreeMapEstimate, meanErrOnEvalFeat] = locFreeFKM.evaluate(extractedLocfreeFeaturesToConsiderVal);
                 disp('Done');
             end
             
