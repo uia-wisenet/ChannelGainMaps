@@ -1,4 +1,4 @@
-classdef LocFreeTrainer
+classdef LocFreeTrainer < CrossValEnabledTrainer
     % Trains a kernel machine for Location Free Cartography.
     
     properties
@@ -27,6 +27,7 @@ classdef LocFreeTrainer
             fkm_out.v_trainMetric    = v_c2m_metric;
             fkm_out.intercept       = mean(v_c2m_metric);
         end
+        
     end
 end
 
