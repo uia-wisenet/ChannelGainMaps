@@ -6,7 +6,7 @@ classdef ForwardHybridKernelMachine
 properties        
     fkm_lf ForwardLFKernelMachine
     fkm_lb ForwardLBKernelMachine
-    wcu WeightCalculatingUnit
+    wcu    WeightCalculatingUnit
 end
 
 methods
@@ -28,11 +28,11 @@ methods
         assert(size(m_queryFeatures_LB, 3) ==2);
         assert(size(m_queryFeatures_LF, 3) ==2);
         
-        % obtain LF estimate
+        % obtain LF estimate:
         v_estimate_LF = obj.fkm_lf.evaluate(m_queryFeatures_LF);
-        % obtain LB estimate
+        % obtain LB estimate:
         v_estimate_LB = obj.fkm_lb.evaluate(m_queryFeatures_LB);
-        % obtain eval weights from interpolating the input errors
+        % obtain eval weights from interpolating the input errors:
         v_weights = obj.wcu.evalWeights(m_locationErrors);
         v_estimate_hybrid = v_weights  .* v_estimate_LB(:) + ...
                          (1-v_weights) .* v_estimate_LF(:);
