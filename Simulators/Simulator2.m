@@ -15,9 +15,12 @@ classdef Simulator2
         b_trainHybrid = 0;
         
         b_cv = 0;
+        b_cvLambdas_hybrid = 0;
         
         b_syntheticLocError = 0
-        std_syntheticLocationNoise = 6;
+        b_syntheticLocEstimate = 0;
+        std_syntheticLocationNoise = 9;
+        snr_locErrors = 20;
     end
     
     methods
@@ -139,7 +142,7 @@ classdef Simulator2
                 my_locFreeTrainer = LocFreeTrainer;
                 my_locFreeTrainer.estimator = obj.locFreeEstimator;
                 %%
-                v_lambdas_toTryLF = logspace(-4, -3, 14);    %TODO: move to properties
+                v_lambdas_toTryLF = logspace(-4, -2, 14);    %TODO: move to properties
                 v_sigmas_toTryLF  = linspace(85, 200, 15);   %TODO: move to properties
                 if obj.b_cv
                     disp ('Cross-validation...')
@@ -150,7 +153,7 @@ classdef Simulator2
                     my_locFreeTrainer.estimator.regularizationParameter = best_lambdaLF;
                     my_locFreeTrainer.estimator.kernel =  @(x, y) ...
                         exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2));
-                    figure(998); clf
+                    figure(999); clf
                     mesh(v_sigmas_toTryLF, v_lambdas_toTryLF, m_crossValScoresLF); 
                     ax = gca;
                     ax.YAxis.Scale = 'log';
@@ -178,13 +181,13 @@ classdef Simulator2
             
             %%
             if obj.b_trainLocBased || obj.b_trainHybrid
-                if obj.b_syntheticLocError
+                if obj.b_syntheticLocEstimate
                     warning('just simulating location algorithm by adding random noise')
                     
                     t3_estim_loc_train    = t3_trueLoc_train ...
                         + obj.std_syntheticLocationNoise*randn(size(t3_trueLoc_train));
                     t3_estim_loc_tracemap = t3_trueLoc_tracemap ...
-                        + obj.std_syntheticLocationNoise*randn(size(t3_trueLoc_train));
+                        + obj.std_syntheticLocationNoise*randn(size(t3_trueLoc_train));                   
                 else
                     disp 'estimating locations at train set...'
                     m_estim_loc_tx = obj.locEstimator.estimateLocations(...
@@ -204,6 +207,24 @@ classdef Simulator2
                     % (space_dim_index, sample_index, rx_or_tx)
                     t3_estim_loc_tracemap = cat(3, estim_loc_tm_tx, estim_loc_tm_rx);
                 end
+                if obj.b_syntheticLocError
+                    locErrors_noiseless_train = ...
+                        squeeze(vecnorm(t3_trueLoc_train - t3_estim_loc_train));
+                    locErrors_train = locErrors_noiseless_train ...
+                        + randn(size(locErrors_noiseless_train))...
+                        * std(locErrors_noiseless_train(:))/obj.snr_locErrors;
+
+                    locErrors_noiseless_val = squeeze(...
+                        vecnorm(t3_trueLoc_tracemap - t3_estim_loc_tracemap));
+                    locErrors_val = locErrors_noiseless_val ...
+                        + randn(size(locErrors_noiseless_val))...
+                        * std(locErrors_noiseless_train(:))/obj.snr_locErrors;
+                else
+                    warning ('location uncertainty not implemented yet...')
+                    locErrors_train = [];
+                    locErrors_val   = [];
+                end
+                    
 
             end
             
@@ -224,7 +245,7 @@ classdef Simulator2
                     my_locBasedTrainer.estimator.regularizationParameter = best_lambdaLB;
                     my_locBasedTrainer.estimator.kernel =  @(x, y) ...
                         exp(-norms(x-y, 2, 1).^2/(best_sigmaLB^2));
-                    figure(999); clf
+                    figure(998); clf
                     mesh(v_sigmas_toTryLB, v_lambdas_toTryLB, m_crossValScoresLB); 
                     ax = gca;
                     ax.YAxis.Scale = 'log';
@@ -250,31 +271,59 @@ classdef Simulator2
                 
                 my_hybridTrainer = HybridTrainer;
                 my_hybridTrainer.hybridEstimator = obj.hybridEstimator;
+                
+                % TODO: using the true location to compute the locErrors is "cheating"
+                % we must do it using only the positioning pilots
+                
                 if obj.b_cv
-                    disp(['Hybrid model inherits lambda and sigma from '...
-                        'the pure loc-Free and the pure locBased']);
+                    disp(['Hybrid model inherits sigma from '...
+                        'the pure loc-Free and the pure locBased,']);
+                    disp ('and sets the lambdas with an extra round of crossval');
                     my_hybridTrainer.hybridEstimator.h_kernelLB = @(x, y) ...
                         exp(-norms(x-y, 2, 1).^2/(best_sigmaLB^2));
-                    my_hybridTrainer.hybridEstimator.regularizationParameterLB = best_lambdaLB;
+                    
                     my_hybridTrainer.hybridEstimator.h_kernelLF = @(x, y) ...
                         exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2));
-                    my_hybridTrainer.hybridEstimator.regularizationParameterLF = best_lambdaLF;
+                    
+                    if obj.b_cvLambdas_hybrid
+                        v_lambdas_toTryLB_hyb = best_lambdaLB *...
+                            logspace(-1, 1,  5);  %TODO: set based on properties
+                        v_lambdas_toTryLF_hyb = best_lambdaLF *...
+                            logspace(-1, 1,  5);  %TODO: set based on properties
+                        [m_crossValScoresHybrid, best_lambdaLF_hyb, ...
+                            best_lambdaLB_hyb] = my_hybridTrainer.crossValidateLambdas(...
+                            locFreeFeatures_train, t3_estim_loc_train, locErrors_train, channelForPairsTr, ...
+                            v_lambdas_toTryLF_hyb, v_lambdas_toTryLB_hyb);
+                        my_hybridTrainer.hybridEstimator.regularizationParameterLF...
+                            = best_lambdaLF_hyb;
+                        my_hybridTrainer.hybridEstimator.regularizationParameterLB...
+                            = best_lambdaLB_hyb;
+                        %
+                        figure(997); clf
+                        mesh(v_lambdas_toTryLB_hyb, v_lambdas_toTryLF_hyb, m_crossValScoresHybrid);
+                        ax = gca;
+                        ax.XAxis.Scale = 'log';
+                        ax.YAxis.Scale = 'log';
+                        xlabel '\lambda LocBased'
+                        ylabel '\lambda LocFree'
+                        title 'HYBRID'
+                    else
+                        disp(['Hybrid model inherits lambda and sigma from '...
+                            'the pure loc-Free and the pure locBased']);
+                        my_hybridTrainer.hybridEstimator.regularizationParameterLB = best_lambdaLB;
+                        my_hybridTrainer.hybridEstimator.regularizationParameterLF = best_lambdaLF;
+                    end
+                
                 end
                 
                 disp ('Training Hybrid...')
-                snr_locErrors = 20;
-                locErrors = squeeze(vecnorm(t3_trueLoc_train - t3_estim_loc_train));
-                locErrors = locErrors + randn(size(locErrors))*...
-                    std(locErrors(:))/snr_locErrors;
-                % TODO: using the true location to compute the locErrors is "cheating"
-                % we must do it using only the positioning pilots
+                
+                my_hybridTrainer.hybridEstimator.b_debugPlots = 1;
                 hybridFKM = my_hybridTrainer.train(...
-                locFreeFeatures_train, t3_estim_loc_train, locErrors, channelForPairsTr);
+                locFreeFeatures_train, t3_estim_loc_train, locErrors_train, channelForPairsTr);
                 
                 disp('Evaluating Hybrid at validation set...')
-                locErrors_val = squeeze(vecnorm(t3_trueLoc_tracemap - t3_estim_loc_tracemap));
-                locErrors_val = locErrors_val + randn(size(locErrors_val))*...
-                    std(locErrors(:))/snr_locErrors;
+                
                 str_mapEstimates.hybrid = hybridFKM.evaluate(...
                     locFreeFeat_tracemap, t3_estim_loc_tracemap, locErrors_val);
                 %
