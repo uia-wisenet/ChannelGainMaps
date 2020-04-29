@@ -12,7 +12,8 @@ classdef HybridEstimator < Estimator
         max_itrs_alternating =20;
         b_verbose = 0;
         b_debugPlots = 0;
-
+        stop_tol = 1e-3
+        
     end
     
     methods
@@ -97,7 +98,7 @@ classdef HybridEstimator < Estimator
             [v_locErrors_tmp, v_indices] = sort(m_locErrors(:));
             %v_h_norm_dvect=zeros(1,obj.max_itrs_alternating);
             %v_h_norm_dvecr=zeros(1,obj.max_itrs_alternating);
-            v_h_obj = zeros(1, obj.max_itrs_alternating);
+            v_h_obj = nan(1, obj.max_itrs_alternating);
             v_d = linspace(0, 1, n_ues);
             m_K_large = sparse(blkdiag(m_K_p, m_K_l));
             lambda_p = obj.regularizationParameterLF;
@@ -161,17 +162,34 @@ classdef HybridEstimator < Estimator
                     + lambda_p* v_coefficients_LF'*m_K_p*v_coefficients_LF...
                     + lambda_l* v_coefficients_LB'*m_K_l*v_coefficients_LB;
                 
-                if obj.b_debugPlots    
+                if obj.b_debugPlots    % TODO: refactor as method
                     figure(990); clf
                     subplot(1, 3, 1);
-                    stem(v_gamma); ylabel \gamma
+                    stem(v_gamma); 
+                    title 'coefficients'
+                    xlabel 'sample index'
+                    ylabel \gamma
                     subplot(1, 3, 2);
-                    plot(v_h_obj); xlabel 'iter index', ylabel 'objective val'
+                    plot(v_h_obj); 
+                    xlabel 'iteration index' 
+                    ylabel 'objective value'
+                    title 'progress'
+                    xlim([0 obj.max_itrs_alternating])
                     subplot(1, 3, 3)
-                    plot(m_locErrors(v_indices), m_dt_dr(v_indices))
+                    plot(m_locErrors(v_indices), m_dt_dr(v_indices))   
+                    title 'weighting function'
                     xlabel 'e'
                     ylabel '$\bar{g}$ (e)' interpreter latex
                 end
+                
+                %check stopping criterion
+                if ind_iters > 1 && abs( ...
+                        v_h_obj(ind_iters) - v_h_obj(ind_iters-1) ...
+                        ) < obj.stop_tol
+                    break
+                end
+                
+                
                 ltc.go(ind_iters);
             end
             v_weights_tmp = m_dt_dr(v_indices);
@@ -283,26 +301,51 @@ classdef HybridEstimator < Estimator
         end
         
         function [m_dt_dr, obj_value] ...
-                = fit_D_additive(v_a, v_b, v_indices)
+                = fit_D_additive(v_a, v_b, v_indices, m_d_initial)
             % Given v_a and v_b, solve for v_d
             
             % d_vec = diag(b_vec)\a_vec; %?
-            % solve using CVX
+           
             
             n_ues = length(v_a);
             assert(length(v_b)==n_ues);
             assert(length(v_indices)==2*n_ues);
+            m_dt_dr = zeros(n_ues, 2);
             
-            cvx_begin quiet
-              variable m_D(n_ues, 2)
-              minimize(  norm( v_a - (diag(v_b) * m_D*[1; 1]/2) )  );
-              subject to
-              0 <= m_D; %#ok<VUNUS>
-              m_D <= 1; %#ok<VUNUS>
-              m_D(v_indices(2:end)) <= m_D(v_indices(1:end-1)); %#ok<VUNUS>
-            cvx_end
-            m_dt_dr = m_D;
-            obj_value = cvx_optval;
+            %solve using Quadprog
+            m_I = eye(2*n_ues);
+            m_C = zeros(2*n_ues-1, 2*n_ues);
+            for ii = 1:2*n_ues-1
+                m_C(ii,:) = m_I(v_indices(ii),:) - m_I(v_indices(ii+1),:);
+            end
+            m_I_n = eye(n_ues);
+            m_H = [m_I_n; m_I_n]*diag(v_b.^2)*[m_I_n m_I_n]/2;
+            v_f = -v_a'*diag(v_b)*[m_I_n m_I_n];
+            m_A = [-m_I; m_I; -m_C];
+            v_bq= [zeros(2*n_ues,1); ones(2*n_ues,1); zeros(2*n_ues-1, 1)];
+            optimoptions = optimset('Display', 'off');
+            if ~exist('m_d_initial', 'var'), m_d_initial = []; end
+            [m_dt_dr(:), fval, flag_exit] = quadprog(...
+                m_H, v_f, m_A, v_bq, [], [],[],[],m_d_initial(:), optimoptions);
+            obj_value = sqrt(0.5*m_dt_dr(:)'*m_H*m_dt_dr(:)+v_f*m_dt_dr(:) + v_a'*v_a);
+%           obj_value == sqrt(fval + v_a'*v_a)
+%           obj_value == norm( v_a - (diag(v_b) * m_dt_dr*[1; 1]/2) )
+%           should hold
+            
+%             % solve using CVX
+%             cvx_begin quiet
+%               variable m_D(n_ues, 2)
+%               minimize(  norm( v_a - (diag(v_b) * m_D*[1; 1]/2) )  );
+%               subject to
+%               0 <= m_D; %#ok<VUNUS>
+%               m_D <= 1; %#ok<VUNUS>
+%               m_D(v_indices(2:end)) <= m_D(v_indices(1:end-1)); %#ok<VUNUS>
+%             cvx_end
+%             obj_value = cvx_optval;
+%                         
+%             norm(m_D(:) - m_dt_dr(:))
+%             keyboard
+             
         end
         
     end %methods
