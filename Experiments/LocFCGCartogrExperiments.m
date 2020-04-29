@@ -1179,6 +1179,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             mySim.b_trainLocBased = 1;
             mySim.b_trainHybrid = 1;
             mySim.b_syntheticLocError = 1;
+            mySim.b_syntheticLocEstimate = 1;
             
             %% this section was adapted from 304 
             % (removal of CartographySimulations)
@@ -1208,6 +1209,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             mySim.featureExtractor.sampling_period = mySim.generator.sampling_period;
             
             mySim.b_cv = 1;
+            mySim.b_cvLambdas_hybrid = 0;
             
             mySim.locFreeEstimator = LocationFreeEstimator;
             mySim.locFreeEstimator.kernel = @(x, y) ...
@@ -1226,7 +1228,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             mySim.locEstimator.Xenb = m_source_loc;
             
             mySim.hybridEstimator = HybridEstimator;
-            mySim.hybridEstimator.b_debugPlots = 1;
+            mySim.hybridEstimator.b_debugPlots = 0;
             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
             mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
@@ -1270,11 +1272,6 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             F = GFigure.captureCurrentFigure;
         end
 
-
     end
-    
-    
-    
-    
-    
+
 end
