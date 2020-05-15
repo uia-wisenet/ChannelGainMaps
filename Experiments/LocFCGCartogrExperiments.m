@@ -1,9 +1,3 @@
-%
-%  This file contains experiments for spectrum cartography. The
-%  experiments 1001 up to 100... correspond to the paper  Location-free
-%  spectrum cartography
-%
-
 classdef LocFCGCartogrExperiments < ExperimentFunctionSet
     
     properties
@@ -1055,7 +1049,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
         % plot histograms of the difference between range diff and
         % LocBasedFeatures
         % same as 304, but using ARSRobustLocationEstimator
-        function F = experiment_305(obj, niter)
+        function F = experiment_3050(obj, niter)
             
             rng(1)
             
@@ -1130,6 +1124,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                 ylabel count
                 hold on
             F = GFigure.captureCurrentFigure();
+            
             figure(998); clf
                 plot(bins, cumsum(counts)/sum(counts));
                 xlabel '|d - r|'
@@ -1139,8 +1134,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             figure(997); clf
                 scatter(m_allLocBasedFeatures(:), m_trueTDoAs(:));
                 xlabel 'Estimated TDoA from xcorr'
-                ylabel 'True TDoA'
-                
+                ylabel 'True TDoA'               
             F(3) = GFigure.captureCurrentFigure();
             
             v_err_loc = norms(m_estim_loc_tm_rx - m_trueLoc_all_points);
@@ -1153,11 +1147,21 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
                          [m_estim_loc_tm_rx(2, i) m_trueLoc_all_points(2,i)])
                      hold on
                 end
+            title 'Each line joins a true location and its estimate'
             F(4) = GFigure.captureCurrentFigure();
+            
+            figure(995); clf
+              subplot(1, 2, 1);
+                scatter(m_estim_loc_tm_rx(1, :), m_trueLoc_all_points(1,:));
+              subplot(1, 2, 2);  
+                scatter(m_estim_loc_tm_rx(2, :), m_trueLoc_all_points(2,:));
+            F(5) = GFigure.captureCurrentFigure();
         end
         
         function F = experiment_4010(obj, niter)
             % copied from exp 302.
+            % Added training , crossval and evaluation of hybrid
+            % method with additive curve fitting.
             
             rng(1)
             
@@ -1209,7 +1213,7 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             mySim.featureExtractor.sampling_period = mySim.generator.sampling_period;
             
             mySim.b_cv = 1;
-            mySim.b_cvLambdas_hybrid = 0;
+            mySim.b_cvLambdas_hybrid = 1;
             
             mySim.locFreeEstimator = LocationFreeEstimator;
             mySim.locFreeEstimator.kernel = @(x, y) ...
@@ -1229,6 +1233,132 @@ classdef LocFCGCartogrExperiments < ExperimentFunctionSet
             
             mySim.hybridEstimator = HybridEstimator;
             mySim.hybridEstimator.b_debugPlots = 0;
+            mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+            mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
+            mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
+            mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
+            
+            % The original CartographySimulations has several lines here to
+            % define the number of different monte carlo runs and define the
+            % random parameters or each MC run
+            
+            % define grid:
+            x1 = mySim.generator.boundary(1,1);   x2 = mySim.generator.boundary(1,2);
+            y1 = mySim.generator.boundary(2,1);   y2 = mySim.generator.boundary(2,2);
+            [m_grid_x, m_grid_y] = ndgrid(...
+                linspace(x2, x1, mySim.generator.n_gridpoints_x), ...
+                linspace(y1, y2, mySim.generator.n_gridpoints_y));
+            
+            %% train and evaluation(traceMap) pairs
+            combin_pairs  = combnk(1:gridSize(1)*gridSize(2),2);
+            v_indices_train_test = randperm(size(combin_pairs, 1), N_pair_train + N_pair_test);
+            m_train_pairs = combin_pairs(v_indices_train_test(1:N_pair_train),:);
+            m_test_pairs  = combin_pairs(v_indices_train_test(N_pair_train+(1:N_pair_test)),:);
+                        
+            %%
+            disp 'Running only one experiment (no monte carlo yet)'
+            [str_NMSE, str_mapEstimates, trueGains] = mySim.simulate(...
+                m_train_pairs, m_test_pairs, m_grid_x, m_grid_y);
+            str_NMSE
+            
+%             M_trueMap = create_animation2([m_tracemap_pairs trueGains' ],  ...
+%                 gridSize(1), gridSize(2), 'trueMap' );
+%             M_locFree = create_animation2([m_tracemap_pairs locFreeMapEstimate' ],...
+%                 gridSize(1), gridSize(2), 'locFree' );
+%             M_locBased = create_animation2([m_tracemap_pairs locBasedMapEstimate' ],...
+%                 gridSize(1), gridSize(2), 'locBased' );
+% %             M_hybrid = create_animation2([m_tracemap_pairs hybridMapEstimate' ],...
+% %                 gridSize(1), gridSize(2), 'hybrid' );             
+%             M = create_animation3([m_tracemap_pairs trueGains' locFreeMapEstimate' ...
+%                 locBasedMapEstimate' ], gridSize(1), gridSize(2), ...
+%                 {'True', 'LocFree', 'LocBased'}, 's40x40') %hybridMapEstimate'  , 'hybrid'
+%             NMSE_locFree
+%             NMSE_locBased
+% %             NMSE_hybrid
+            F = GFigure.captureCurrentFigure;
+        end
+
+        function F = experiment_4020(obj, niter)
+            % copied from exp 4010
+            % evaluation of hybrid
+            % method with 2-dimensional curve fitting.
+            % No crossvalidation of the hybrid (only xvalidated values
+            % obtained from the pure LocF and pure LocB
+            
+            rng(1)
+            
+            x_wall_file_name='./modelFiles/x_coord_4walls.mat';
+            y_wall_file_name='./modelFiles/y_coord_4walls.mat';
+            selectedWalls=2:4; %!
+            
+            kernelSigmaLF = 69;
+            kernelSigmaLB = 35;
+            lambdaLF      = 1e-3;
+            lambdaLB      = 1e-3;       
+        
+            gridSize = [5 5 ]; %! 20 20
+            N_pair_train = 100;
+            N_pair_test  = 100;
+            
+            mySim = Simulator2; 
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_syntheticLocError = 1;
+            mySim.b_syntheticLocEstimate = 1;
+            
+            mySim.b_cv = 1;
+            mySim.b_cvLambdas_hybrid = 1;
+            % TODO: accelerate the quadprog that fits the 2-dimensional v_d
+            % by removing the redundant constraints
+
+            
+            %% this section was adapted from 304 
+            % (removal of CartographySimulations)
+            
+            carrier_frequency = 800e6;
+            receiverBandwidth = 20e6;
+            maxSamplesPerPilot = 10;
+            
+            generator_tmp = MultiWallChannelGainGenerator;
+            generator_tmp.f = carrier_frequency;
+            generator_tmp.sampling_period = 1/receiverBandwidth;
+            generator_tmp.maxSamplesPerPilot = maxSamplesPerPilot;
+            [mySim.generator, m_source_loc] = baselineGenerator2(...
+                selectedWalls, x_wall_file_name, y_wall_file_name, ...
+                gridSize, generator_tmp);
+            mySim.generator.delay_estimation_offset = 2*rand;
+           
+            %%
+            % mySim.features = 1:size(combnk(1:numberOfSources,2),1);
+            % we could move .baselineGenerator to the Simulator[2] class
+            mySim.sampler = SpectrumMapSampler;
+            mySim.sampler.pilotNoiseSTD = 1e-5;
+            mySim.sampler.powerNoiseSTD = 0.5;
+            mySim.sampler.maxSamplesPerPilot=maxSamplesPerPilot;
+            %mySim.PCAenable=obj.PCAenabler;
+            mySim.featureExtractor = FeatureExtractor;
+            mySim.featureExtractor.sampling_period = mySim.generator.sampling_period;
+                        
+            mySim.locFreeEstimator = LocationFreeEstimator;
+            mySim.locFreeEstimator.kernel = @(x, y) ...
+                exp(-norms(x-y, 2, 1).^2/(kernelSigmaLF^2));
+            mySim.locFreeEstimator.regularizationParameter = lambdaLF;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            
+            mySim.locBasedEstimator = LocationBasedEstimator;
+            mySim.locEstimator = WangLocationEstimator;
+            mySim.locBasedEstimator.kernel = @(x, y) ...
+                exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
+            mySim.locBasedEstimator.regularizationParameter = lambdaLB;
+            mySim.locBasedEstimator.locationNoiseSTD = []; %?
+            mySim.locBasedEstimator.Xenb = m_source_loc;
+            
+            mySim.locEstimator.Xenb = m_source_loc;
+            
+            mySim.hybridEstimator = HybridEstimator;
+            mySim.hybridEstimator.b_debugPlots = 0;
+            mySim.hybridEstimator.max_itrs_alternating = 20;
             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
             mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
