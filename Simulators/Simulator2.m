@@ -43,7 +43,7 @@ classdef Simulator2
             source_loc=[obj.generator.xt_loc; obj.generator.yt_loc];
             n_sources = size(source_loc,2);
             
-            %% generate pilot signals and extract features 
+            %% generate pilot signals 
             %  for all points in the grid
             
             disp('Precomputing pilot signals...')
@@ -68,13 +68,16 @@ classdef Simulator2
             t3_reshaped_receivedPS = reshape(t4_receivedPilotSignals, ...
                 [v_size(1:2), prod(v_size(3:4))]);
             
+            %% Extract features for locFree and locBased algs
+            
             disp('Extracting features...')
             t_allLocFreeFeatures  = obj.featureExtractor.locFreeExtract(...
                 t3_reshaped_receivedPS); %Center of mass of xcorr
             t_allLocBasedFeatures = obj.featureExtractor.locBasedExtract(...
                 t3_reshaped_receivedPS); %Time differences of arrival
             
-            %% this section can be refactored by defining a static method
+            %% Compute channel gains
+            % this section can be refactored by defining a static method
             channelForPairsTr_noiseless=zeros(N_pair_train,1);
             n_sp_CoM  = size(t_allLocFreeFeatures,  1); % no. of source pairs
             n_sp_TDoA = size(t_allLocBasedFeatures, 1); % no. of source pairs
@@ -82,6 +85,7 @@ classdef Simulator2
             locFreeFeatures_train  = zeros([n_sp_CoM,  size(m_train_pairs)]);
             locBasedFeatures_train = zeros([n_sp_TDoA, size(m_train_pairs)]);
             
+            % channel gains at training pairs
             disp('Computing channel gains (for training)...')
             ltc = LoopTimeControl(N_pair_train);
             for ind_pair = 1:N_pair_train
@@ -105,6 +109,7 @@ classdef Simulator2
                 obj.sampler.powerNoiseSTD* ...
                 randn(size(channelForPairsTr_noiseless));
             
+            % compute channel gains at test pairs
             channelForPairs_tracemap = zeros(1, N_pair_tracemap); 
             t3_trueLoc_tracemap   = zeros([2, size(m_tracemap_pairs)]);
             locFreeFeat_tracemap  = zeros([n_sp_CoM, size(m_tracemap_pairs)]);
@@ -135,13 +140,13 @@ classdef Simulator2
             % here, the original simulator had some lines defining which
             % features to consider. This is skipped here.        
             
-            %%
+            %% Training and testing: locFree
             
             if obj.b_trainLocFree
                 disp ('Training LocFree...')
                 my_locFreeTrainer = LocFreeTrainer;
                 my_locFreeTrainer.estimator = obj.locFreeEstimator;
-                %%
+                %
                 v_lambdas_toTryLF = logspace(-4, -2, 14);    %TODO: move to properties
                 v_sigmas_toTryLF  = linspace(85, 200, 15);   %TODO: move to properties
                 if obj.b_cv
@@ -161,7 +166,7 @@ classdef Simulator2
                     ylabel \lambda
                     title 'LOCATION FREE'
                 end
-                %%
+                %
                 [locFreeFKM, probMissingFeat] = my_locFreeTrainer.train(...
                     locFreeFeatures_train, channelForPairsTr); %#ok<ASGLU>
                 %
@@ -179,7 +184,8 @@ classdef Simulator2
             end
             
             
-            %%
+            %% If locationBased or Hybrid is used, 
+            % call the locationEstimator
             if obj.b_trainLocBased || obj.b_trainHybrid
                 if obj.b_syntheticLocEstimate
                     warning('just simulating location algorithm by adding random noise')
@@ -228,12 +234,13 @@ classdef Simulator2
 
             end
             
-            %%
+            %% Train and test location Based estimator
+            
             if obj.b_trainLocBased
                 disp ('Training LocBased...')
                 my_locBasedTrainer = LocBasedTrainer;
                 my_locBasedTrainer.estimator = obj.locBasedEstimator;
-                %%
+                %
                 v_lambdas_toTryLB = logspace(-5, -2,  15);   %TODO: move to properties
                 v_sigmas_toTryLB  = linspace(20, 100, 12);   %TODO: move to properties
                 if obj.b_cv
@@ -254,7 +261,7 @@ classdef Simulator2
                     title 'LOCATION BASED'
                 end % save por_siacaso
                 
-                %%
+                %
                 locBasedFKM = my_locBasedTrainer.train(...
                     t3_estim_loc_train,channelForPairsTr);
                 
@@ -266,7 +273,7 @@ classdef Simulator2
                 str_mapEstimates.locBased = zeros(size(channelForPairs_tracemap));
             end
             
-            %%
+            %% Train and test hybrid estimator
             if obj.b_trainHybrid
                 
                 my_hybridTrainer = HybridTrainer;
