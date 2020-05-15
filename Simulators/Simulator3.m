@@ -116,7 +116,7 @@ classdef Simulator3
                         obj.v_lambdas_toTryLF, obj.v_sigmas_toTryLF);
                     my_locFreeTrainer.estimator.regularizationParameter = best_lambdaLF;
                     my_locFreeTrainer.estimator.kernel =  @(x, y) ...
-                        exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2));
+                        exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLF^2));
                     if obj.b_meshCVSurfaces
                         figure(999); clf
                         mesh(obj.v_sigmas_toTryLF, obj.v_lambdas_toTryLF, m_crossValScoresLF);
@@ -135,7 +135,7 @@ classdef Simulator3
                 end
                 my_locFreeTrainer.estimator.regularizationParameter = best_lambdaLF;
                 my_locFreeTrainer.estimator.kernel =  @(x, y) ...
-                    exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2)); 
+                    exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLF^2)); 
                 
                 [locFreeFKM, probMissingFeat] = my_locFreeTrainer.train(...
                     t3_locFreeFeatures_train, v_channelGains_train); %#ok<ASGLU>
@@ -189,7 +189,7 @@ classdef Simulator3
                 end
                 my_locBasedTrainer.estimator.regularizationParameter = best_lambdaLB;
                 my_locBasedTrainer.estimator.kernel =  @(x, y) ...
-                    exp(-norms(x-y, 2, 1).^2/(best_sigmaLB^2));
+                    exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLB^2));
                 
                 locBasedFKM = my_locBasedTrainer.train(...
                     t3_estimatedLocations_train, v_channelGains_train);
@@ -225,10 +225,10 @@ classdef Simulator3
                     'the pure loc-Free and the pure locBased,']);
                 disp ('and sets the lambdas with an extra round of crossval');
                 my_hybridTrainer.hybridEstimator.h_kernelLB = @(x, y) ...
-                    exp(-norms(x-y, 2, 1).^2/(best_sigmaLB^2));
+                    exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLB^2));
                 
                 my_hybridTrainer.hybridEstimator.h_kernelLF = @(x, y) ...
-                    exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2));
+                    exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLF^2));
                                 
                 if obj.b_cvLambdas_hybrid
                     v_lambdas_toTryLB_hyb = best_lambdaLB *...

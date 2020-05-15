@@ -44,7 +44,7 @@ classdef TwoDimensionalWeightCalculatingUnit < WeightCalculatingUnit
 %                     keyboard
 %                 end
                 
-                v_dists = norms(obj.m_locErrors_train([v_ind_upper; ...
+                v_dists = vecnorm(obj.m_locErrors_train([v_ind_upper; ...
                     v_ind_lower],:) - v_e, 2, 2);
                 if any(v_dists==0)
                     v_dists = v_dists + 1e-5;

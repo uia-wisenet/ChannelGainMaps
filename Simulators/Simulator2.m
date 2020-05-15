@@ -157,7 +157,7 @@ classdef Simulator2
                         v_lambdas_toTryLF, v_sigmas_toTryLF);
                     my_locFreeTrainer.estimator.regularizationParameter = best_lambdaLF;
                     my_locFreeTrainer.estimator.kernel =  @(x, y) ...
-                        exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2));
+                        exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLF^2));
                     figure(999); clf
                     mesh(v_sigmas_toTryLF, v_lambdas_toTryLF, m_crossValScoresLF); 
                     ax = gca;
@@ -251,7 +251,7 @@ classdef Simulator2
                         v_lambdas_toTryLB, v_sigmas_toTryLB);
                     my_locBasedTrainer.estimator.regularizationParameter = best_lambdaLB;
                     my_locBasedTrainer.estimator.kernel =  @(x, y) ...
-                        exp(-norms(x-y, 2, 1).^2/(best_sigmaLB^2));
+                        exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLB^2));
                     figure(998); clf
                     mesh(v_sigmas_toTryLB, v_lambdas_toTryLB, m_crossValScoresLB); 
                     ax = gca;
@@ -287,10 +287,10 @@ classdef Simulator2
                         'the pure loc-Free and the pure locBased,']);
                     disp ('and sets the lambdas with an extra round of crossval');
                     my_hybridTrainer.hybridEstimator.h_kernelLB = @(x, y) ...
-                        exp(-norms(x-y, 2, 1).^2/(best_sigmaLB^2));
+                        exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLB^2));
                     
                     my_hybridTrainer.hybridEstimator.h_kernelLF = @(x, y) ...
-                        exp(-norms(x-y, 2, 1).^2/(best_sigmaLF^2));
+                        exp(-vecnorm(x-y, 2, 1).^2/(best_sigmaLF^2));
                     
                     if obj.b_cvLambdas_hybrid
                         v_lambdas_toTryLB_hyb = best_lambdaLB *...
