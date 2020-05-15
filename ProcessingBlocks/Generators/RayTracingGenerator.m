@@ -8,10 +8,10 @@ classdef RayTracingGenerator < MapGenerator
     properties
         f   %carrier frequency
         xt  % x coordinates of the source locations
-        xt_loc % position of the localization anchor nodes
-        yt_loc % position of the localization anchor nodes
         yt  % y coordinates of the source locations
         zt  % z coordinates of the source locations
+        xt_loc % position of the localization anchor nodes
+        yt_loc % position of the localization anchor nodes
         n_gridpoints_x % size of evaluation grid in x axis
         n_gridpoints_y % size of evaluation grid in y axis
         maxSamplesPerPilot
@@ -60,10 +60,8 @@ classdef RayTracingGenerator < MapGenerator
                     ltm.go(ind_yr+(ind_xr-1)*obj.n_gridpoints_y);
                 end
             end
-        end
-        
-        
-        
+        end       
+              
         function [h_D,samplingTime] = digitalImpulseResponse(obj, alpha, delays)
             % calculate digital impulse response given the delays and powers of
             % the analog (time-continuous) channel impulse response

@@ -8,7 +8,8 @@
 % clear all
 % clc
 
-function [wallxyz1, wallxyz2, wallxyz3, wallxyz4,wallX,wallY,wallZ] = CSV23D_V1 (X,Y,demoMode,groundLevel,ceilingLevel,varargin)
+function [wallxyz1, wallxyz2, wallxyz3, wallxyz4,wallX,wallY,wallZ] = ...
+    CSV23D_V1 (X,Y,demoMode,groundLevel,ceilingLevel,varargin)
 
 % [fileName,fileAddress] = uigetfile('*.csv');
 
@@ -25,7 +26,8 @@ function [wallxyz1, wallxyz2, wallxyz3, wallxyz4,wallX,wallY,wallZ] = CSV23D_V1 
 %     [~,remain{i,1}] = strtok(pointData{i,1},';');
 %     Y(i,1) = str2num(strtok(remain{i},';'));
 % end
-%load('data/x_coord_6walls.mat'); load('data/y_coord_6walls.mat');  % Looads X and Y for all the 6 walls. If u want new walls, generate them from the excel file 
+%load('data/x_coord_6walls.mat'); load('data/y_coord_6walls.mat');  % Loads
+%X and Y for all the 6 walls. If u want new walls, generate them from the excel file 
 % X=zeros(12,1);Y=zeros(12,1);
 %% 
 wallxyz1 = zeros(size(X,1)/2,3);
