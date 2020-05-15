@@ -1,23 +1,23 @@
-classdef HybridEstimator < Estimator
+classdef HybridEstimator2 < HybridEstimator
     % HybridEstimator class
     %   This class allows to train and query a LF and LB kernel
     %   machine desgined to estimate the channel gain from features of both types 
     %   (location-free features annd location features) received at sensors pairs.
     
-    properties
-        h_kernelLF % function handle defining the LF kernel
-        h_kernelLB % function handle defining the LF kernel
-        regularizationParameterLF % lambda for LocFree machine  (KRR)
-        regularizationParameterLB % lambda for LocBased machine (KRR)
-        max_itrs_alternating =30;
-        b_verbose = 1;
-        b_debugPlots = 0;
-        stop_tol = 1e-4
-        method_fit_D = 'twoDimensional'
-        
-        b_tryToBalance = 0;
-        
-    end
+%     properties
+%         h_kernelLF % function handle defining the LF kernel
+%         h_kernelLB % function handle defining the LF kernel
+%         regularizationParameterLF % lambda for LocFree machine  (KRR)
+%         regularizationParameterLB % lambda for LocBased machine (KRR)
+%         max_itrs_alternating =30;
+%         b_verbose = 1;
+%         b_debugPlots = 0;
+%         stop_tol = 1e-4
+%         method_fit_D = 'twoDimensional'
+%         
+%         b_tryToBalance = 0;
+%         
+%     end
     
     methods
         function [v_coefficients_LF, v_coefficients_LB, intercept, wcu] ...
@@ -89,38 +89,17 @@ classdef HybridEstimator < Estimator
             lambda_p = obj.regularizationParameterLF;
             lambda_l = obj.regularizationParameterLB;
             
-            %initialize coefficients to the pure LocB and the pure LocF
-            % kernel machines
-            v_coefficients_LF = (m_K_p+lambda_p*eye(n_ues))\v_zm_channelForPairs;
-            v_coefficients_LB = (m_K_l+lambda_l*eye(n_ues))\v_zm_channelForPairs;
-                     
-            v_d = [];
+%             %initialize coefficients to the pure LocB and the pure LocF
+%             % kernel machines
+%             v_coefficients_LF = (m_K_p+lambda_p*eye(n_ues))\v_zm_channelForPairs;
+%             v_coefficients_LB = (m_K_l+lambda_l*eye(n_ues))\v_zm_channelForPairs;
+
+            % initialize v_d to 1/2
+            v_d = 1/2*ones(n_ues, 1);
+
             ltc = LoopTimeControl(obj.max_itrs_alternating);
             for ind_iters=1:obj.max_itrs_alternating 
-                % Minimization 1: Given v_a and v_b, solve for v_d
-                v_a = v_zm_channelForPairs- m_K_p*v_coefficients_LF;
-                v_b = m_K_l*v_coefficients_LB - m_K_p*v_coefficients_LF;
-                switch obj.method_fit_D
-                    case 'additive'
-                        [m_dt_dr, obj_value] = obj.fit_D_additive(...
-                            v_a, v_b, v_indices);
-                        v_d = m_dt_dr*[1;1]/2;
-                    case 'twoDimensional'
-                        if obj.b_tryToBalance
-                            regDiff = lambda_l * v_coefficients_LB'*...
-                                   m_K_l * v_coefficients_LB...
-                                   -  lambda_p * v_coefficients_LF'*...
-                                   m_K_p*v_coefficients_LF;
-                        else
-                            regDiff = 0;
-                        end
-                        [v_d, obj_value] = obj.fit_D_twoDimensional(...
-                            v_a, v_b, regDiff, m_indicesDAG_Pairs, v_d);
-                    otherwise
-                        error 'unrecognized curve fitting method'
-                end
-                                
-                % Minimization 2: Given v_d_diag, solve for 
+                % Minimization 1: Given v_d_diag, solve for 
                 % kernel machine coefficients
                 m_D = diag(v_d);
                 m_fat = sparse([eye(n_ues)-m_D,  m_D]);
@@ -128,22 +107,38 @@ classdef HybridEstimator < Estimator
                     lambda_p*eye(n_ues), lambda_l*eye(n_ues)));
                 if obj.b_tryToBalance
                     m_Lambda = sparse(blkdiag(...
-                        lambda_p.*mean(1-diag(m_D))*eye(n_ues),...
-                        lambda_l.*mean(  diag(m_D))*eye(n_ues) ));
+                        lambda_p.*mean(1-v_d)*eye(n_ues),...
+                        lambda_l.*mean(  v_d)*eye(n_ues) ));
                 end
                 m_toInvert = m_fat'*(m_fat*m_K_large) + n_ues*m_Lambda;
                 v_gamma = m_toInvert \ ...
                     ( m_fat'* v_zm_channelForPairs);
                 v_coefficients_LF = v_gamma(1:n_ues);
                 v_coefficients_LB = v_gamma(n_ues+1:end);
+
+                % Minimization 2: Given v_a and v_b, solve for v_d
+                v_a = v_zm_channelForPairs- m_K_p*v_coefficients_LF;
+                v_b = m_K_l*v_coefficients_LB - m_K_p*v_coefficients_LF;
+                assert( isequal(obj.method_fit_D, 'twoDimensional'))
+                if obj.b_tryToBalance
+                    regDiff = lambda_l * v_coefficients_LB'*...
+                        m_K_l * v_coefficients_LB...
+                        -  lambda_p * v_coefficients_LF'*...
+                        m_K_p*v_coefficients_LF;
+                else
+                    regDiff = 0;
+                end
+                [v_d, obj_value] = obj.fit_D_twoDimensional(...
+                    v_a, v_b, regDiff, m_indicesDAG_Pairs, v_d);
+                
                                 
                 %%
                 
                 v_h_obj(ind_iters) = sum_square( v_zm_channelForPairs...
-                    - m_D*m_K_l*v_coefficients_LB ...
-                    - (eye(n_ues)-m_D)*m_K_p*v_coefficients_LF )/n_ues ...
-                    + lambda_p* v_coefficients_LF'*m_K_p*v_coefficients_LF...
-                    + lambda_l* v_coefficients_LB'*m_K_l*v_coefficients_LB;
+                    - sparse(m_D)           *(m_K_l*v_coefficients_LB) ...
+                    - sparse(eye(n_ues)-m_D)*(m_K_p*v_coefficients_LF) )/n_ues ...
+                    + lambda_p* mean(1-v_d)*v_coefficients_LF'*m_K_p*v_coefficients_LF...
+                    + lambda_l* mean(  v_d)*v_coefficients_LB'*m_K_l*v_coefficients_LB;
                 
                 if obj.b_debugPlots
                     switch obj.method_fit_D

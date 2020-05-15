@@ -16,7 +16,7 @@ classdef LocationFreeEstimator < Estimator
         regParEval %regularization parameter for completing missing features when evaluating the map
         evalOption % choose the option of determining missing features in the map evaluation
         
-        b_verbose = 1
+        b_verbose = 0
     end
     
     methods
@@ -168,7 +168,7 @@ classdef LocationFreeEstimator < Estimator
 %                         permute(t3_all_inputs_to_kernels, [1 3 2])));
 %                 catch ME
 %                     if isequal(ME, 'MATLAB:array:SizeLimitExceeded')
-                        disp('Building array row by row')
+                      %  disp('Building array row by row')
                         Ke1 = zeros(n_ues, n_ues);
                         ltc = LoopTimeControl(n_ues);
                         for i = 1:n_ues

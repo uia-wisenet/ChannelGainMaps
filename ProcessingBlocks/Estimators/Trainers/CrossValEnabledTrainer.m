@@ -21,7 +21,8 @@ classdef CrossValEnabledTrainer
                 my_estimator = obj.estimator;
                 my_estimator.regularizationParameter = m_lambdas(ii);
                 my_estimator.kernel = @(x, y) ...
-                    exp(-norms(x-y, 2, 1).^2/(m_sigmas(ii)^2));
+                    exp(-vecnorm(x-y, 2, 1).^2/(m_sigmas(ii)^2)); 
+                % we had norms instead of vecnorm here before
                 v_scoresFolds = zeros(obj.n_folds, 1);
                 for i_fold = 1:obj.n_folds
                     obj_now = obj;

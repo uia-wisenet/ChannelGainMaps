@@ -10,7 +10,7 @@ classdef LocationBasedEstimator < Estimator
         Xenb % locations of the eNBs
         locationNoiseSTD % standard deviation of the noise
         
-        b_verbose = 1
+        b_verbose = 0
     end
     
     methods
@@ -54,7 +54,7 @@ classdef LocationBasedEstimator < Estimator
 %                 Ke2 = squeeze(feval(obj.kernel, t3_all_inputs_to_kernels, permute(t3_all_inputs_to_kernels, [1 3 2])));
 %             catch ME
 %                 if isequal(ME, 'MATLAB:array:SizeLimitExceeded')
-                    disp('Building array row by row')
+                    %disp('Building array row by row')
                     Ke1 = zeros(n_ues, n_ues);
                     ltc = LoopTimeControl(n_ues);
                     for i = 1:n_ues

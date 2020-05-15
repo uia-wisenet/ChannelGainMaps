@@ -1,56 +1,94 @@
-classdef MultiWallChannelGainGenerator < RayTracingGenerator
+classdef MultiWallChannelGainGenerator < ChannelGainGenerator
     % Allows to create CG maps using the multiwall propagation model
     % proposed in the paper by Salaheddin et al in
     % An enhanced modified multi wall propagation model, in Proc. IEEE Global Internet Things Summit,
     % Geneva, Switzerland, Jun. 2017, pp. 1-4.
 
-    properties
+    properties %defining the environment
         
-        ptx % the trasnmit power for the C2M
-        ptx_loc % the transmit power vector for the localization channel
-        zr    % the receiver height
-        x1    % the leftmost simulation area boundary
-        x2    % the rightmost  simulation area boundary
-        %         RG
-        %         RW
-        y_limits %  the lower and uppermost simulation area boundary along
-        path_loss_exp
-        boundary % Defining the boundary of the analysis (something like a boundary condition)
-        estimateLocFreeSpace % estimate location in free space scenario
-        losFlag = 1;
-        optimizationMode = 0;
-        reflectionFlag=1;                    % whether or not calculate First reflections
-        secondReflectionFlag=1;
-        reflectExaggerationFac=1;          % Must be 1 unless to emphasize reflection for demonstration purposes                                    % whether or not calculate LoS
-        disableIncidentAngle=0;                % 1 Disables the incident angle calculation, if disableIncidentAngle= 1
-        solidIncidentAngle=45;                  % if disableIncidentAngle =1, then assign this which overwrites all the incident angles! This is unnecessary feature
-        polarizationSwap =1;               % (See notes in HOW THIS WORSK)  % 1, Applies TE to walls and TM to ceiling. 0, applies TM to the walls and TE to the ceiling
-        refDistance=1.25;            % Reference distance from Tx, which is approximately 3 wavelength at 800MHz
-        FPSLRefLoss=0;
-        imageCGScale=1;       %  % increase this if number of meshes nodes are small
+        z_rx_default = 1.5   % the default receiver    height (m)
+        z_tx_default = 1.5   % the default transmitter height (m)
+        f     % carrier frequency
+
+        %% Propagation conditions:
+        
+        path_loss_exp             % path loss exponent
+        reflectExaggerationFac=1; % Must be 1 unless one wants 
+        % to emphasize reflection for demonstration purposes 
+        
+        refDistance=1.25;         % Reference distance from Tx, which is 
+                                  % approximately 3 wavelengths at 800MHz
+        FPSLRefLoss=0;            % TODO: what is this?
         
         antennaGainRes=40;
-        antennaEffiLoss=0;  %-11.5        % dB antenna efficiency, mismatch and loss all together
-        
-        demoMode=0;
-        
+        antennaEffiLoss=0; %-11.5 % dB antenna efficiency, mismatch and 
+                                  % loss all together
+     
+        %% Properties related to ROI, walls, ground, and ceiling
+        X % x-coordinates of all walls
+        Y % y-coordinates of all walls
         ceilingEnable=0;  % Allowing to define ceiling and floor
         groundLevel=0;
         ceilingLevel=3;   % Height of the ceiling
-        %
-        X % x-coordinates of all walls
-        Y % y-coordinates of all walls
         
+        boundary % Defining the boundary of the region of interest
+        %"(something like a boundary condition)" ???
+
+        %% parameters related to the positioning pilots
+        xt_loc % position of the localization anchor nodes
+        yt_loc % position of the localization anchor nodes
+        zt_loc % currently not used -- Q: what is the z of the location sources?
+
+        ptx_loc % the transmit power vector for the localization channel      
+              
+        sampling_period % of the receiver
+        maxSamplesPerPilot
+        delay_estimation_offset = 0; % in sampling periods, in order to 
+        % remove the ToA information from the measured pilots
+        % this variable represents the offset in synchronizing the loc
+        % source and the node receiving the pilots.
+        % adding a constant should not give significantly different TDoA measurements
+
+        %% operation mode flags
+        demoMode=0;
+        estimateLocFreeSpace % estimate location in free space scenario
+        disableIncidentAngle=0; % 1 Disables the incident angle calculation
+        % (see propertysolid IncidentAngle)
+        polarizationSwap =1;    % 1, Applies TE to walls and TM to ceiling. 
+                                % 0, applies TM to the walls and TE to the ceiling
+                                % (See notes in "HOW THIS WORKS")
+
+        losFlag = 1;  % whether or not calculate LoS
+        reflectionFlag=1;                    % whether or not calculate First reflections
+        secondReflectionFlag=1;
+        
+        optimizationMode = 0;
+
         b_verbose = 1
-        
-        delay_estimation_offset = 0; % in sampling periods
-        % Luismi:in theory, adding a constant should not give very different results
-        
+
     end
     
-    methods
+%     properties %unused
+%         ptx % the trasnmit power for the C2M 
+%         % not used anymore because we are generating channel gains between
+%         % pairs of points, not a power map
+%         %
+%         
+%         solidIncidentAngle=45;                 
+%         % if disableIncidentAngle =1, then assign this which overwrites all
+%         % the incident angles! This is an unnecessary feature
+%         imageCGScale=1;   % ???  "increase this if number of meshes nodes are small"
+%         %% These variables were redundant because we have them in obj.boundary
+%         x1    % the leftmost simulation area boundary
+%         x2    % the rightmost  simulation area boundary
+%         %         RG
+%         %         RW
+%         y_limits %  the lower and uppermost simulation area boundary along
+%     end
+    
+    methods % used to draw the scene
         
-        function plot_walls(obj)
+        function plot_walls(obj, varargin)
             v_X = obj.X;
             v_Y = obj.Y;
             assert(iscolumn(v_X))
@@ -62,11 +100,15 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             
             t_walls = reshape([v_X v_Y] , [2, n_walls, 2]);
             
+            if isempty(varargin)
+                varargin = {'k', 'LineWidth', 4};
+            end
+            
             for i_wall = 1:n_walls
                 m_wall = squeeze(t_walls(:, i_wall, :));
                 if not(all(m_wall==0))
                     v_midpoint = (m_wall(1,:)+m_wall(2,:))/2;
-                    plot(m_wall(:,1), m_wall(:,2));
+                    plot(m_wall(:,1), m_wall(:,2), varargin{:});
                     hold on
                     text(v_midpoint(1), v_midpoint(2), num2str(i_wall));
                 end
@@ -78,13 +120,31 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
            ylim(obj.boundary(2, 1:2))
         end
         
-        function m_H_D = calculateImpulse_Resp(obj, v_xy_rx)
+        function plot_sources(obj, varargin)
+            if isempty(varargin)
+                varargin = {'*k'};
+            end
+            plot(obj.xt_loc, obj.yt_loc, varargin{:})
+        end
+        
+        function plot_environment(obj)
+            obj.plot_walls();
+            hold on
+            obj.plot_sources();
+            obj.set_lims_to_plot();
+        end
+        
+    end
+    
+    methods
+        
+        function m_H_D = calculateImpulse_Resp(obj, v_xyz_rx)
             n_sources=length(obj.xt_loc);
             m_H_D=zeros(n_sources,obj.maxSamplesPerPilot);
             for ind_source=1:n_sources
                 v_xy_tx = [obj.xt_loc(ind_source) obj.yt_loc(ind_source)];
                 [Rx, RxTx, firstOrderRef,  secondOrderReflec] = ...
-                    calculatePaths(obj, v_xy_tx, v_xy_rx);
+                    calculatePaths(obj, v_xy_tx, v_xyz_rx);
                 
                 % This section comes from the street canyon generator
                 
@@ -104,7 +164,8 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                 
                 v_h_D = sqrt(db2pow(obj.ptx_loc(ind_source))) ...
                     * obj.digitalImpulseResponse(alpha_coeff, ...
-                    delays+obj.delay_estimation_offset*obj.sampling_period);
+                    delays+obj.delay_estimation_offset*obj.sampling_period, ...
+                    obj.sampling_period, obj.f);
                 
                 %% Get the impulse responses from all sources
                 if length(v_h_D) < obj.maxSamplesPerPilot
@@ -116,9 +177,9 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             %keyboard
         end
         
-        function channel_gain = calculateCGBetween(obj, xt, xr)
+        function channel_gain = calculateCGBetween(obj, v_xyz_tx, v_xyz_rx)
 
-            Rx = calculatePaths(obj, xt, xr);
+            Rx = calculatePaths(obj, v_xyz_tx, v_xyz_rx);
             
             %% Reflection & Line Of Sight Propagation Map
             
@@ -129,51 +190,11 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             channel_gain=10*log10(abs(channel_LOS+channel_first_refl+channel_second_refl));
 
         end
-        
-        function [estimatedPilotSignals, channel_out, source_loc, ...
-                evaluationGrid_x, evaluationGrid_y] ...
-                = generateCGMap(obj, xt, b_iWantChannelGains)
-            % GenerateCGMap creates a channel gain map by calling a raytracer for
-            % every point in grid and the transmitter located at xt(stacks 2 transmitter coordinates)
-            if not(exist('b_iWantChannelGains', 'var'))
-                b_iWantChannelGains = 1;
-            end
-            [evaluationGrid_x, evaluationGrid_y] = ndgrid(linspace(obj.x2, obj.x1, obj.n_gridpoints_x), linspace(obj.y_limits(1),obj.y_limits(2), obj.n_gridpoints_y));
-            channel_out=zeros(obj.n_gridpoints_x,obj.n_gridpoints_y);
-            source_loc=[obj.xt_loc; obj.yt_loc];
-            estimatedPilotSignals=zeros(size(source_loc,2) ,obj.maxSamplesPerPilot,obj.n_gridpoints_x,obj.n_gridpoints_y);
-            ltm =LoopTimeControl(obj.n_gridpoints_x*obj.n_gridpoints_x);
-            for ind_xr = 1:obj.n_gridpoints_x
-                for ind_yr = 1:obj.n_gridpoints_y
-                    if b_iWantChannelGains
-                        channel_out(ind_xr, ind_yr) = obj.calculateCGBetween(xt,...
-                            [evaluationGrid_x(ind_xr, ind_yr), evaluationGrid_y(ind_xr,ind_yr)]);
-                    end
-                    estimatedPilotSignals(:,:,ind_xr, ind_yr)=obj.calculateImpulse_Resp([evaluationGrid_x(ind_xr,ind_yr),...
-                        evaluationGrid_y(ind_xr,ind_yr)]); %This is the critical line
-                    if obj.b_verbose
-                        ltm.go(ind_yr+(ind_xr-1)*obj.n_gridpoints_y);
-                    end
-                end
-            end
-        end
-        
-        function power_out = generatePowerMap(obj, channel_out)
-            % Generates the power map from channel gain map and transmit
-            % power of the source.
-            grid_points_x=size(channel_out,1);
-            grid_points_y=size(channel_out,2);
-            power_out=zeros(grid_points_x, grid_points_y);
-            for ind_xr = 1:grid_points_x
-                for ind_yr = 1:grid_points_y
-                    power_out(ind_xr, ind_yr)= channel_out(ind_xr, ind_yr)+ obj.ptx;
-                end
-            end
-            
-        end
-        
+                
+        % the mtehod calculatePaths contains most of the code we took from 
+        % Salaheddin's scripts
         function [Rx, RxTx, firstOrderRef,  secondOrderReflec] = ...
-                calculatePaths(obj, v_xy_tx, v_xy_rx)
+                calculatePaths(obj, v_xyz_tx, v_xyz_rx)
             
             
             %%      This section comes from the multiwall code by  Salaheddin
@@ -189,7 +210,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             % top)
             [wallxyz1, wallxyz2, wallxyz3, wallxyz4,wallX,wallY,wallZ] = ...
                 CSV23D_V1(obj.X, obj.Y,obj.demoMode,obj.groundLevel,...
-                obj.ceilingLevel,[v_xy_tx(1) v_xy_tx(2) obj.zt]);
+                obj.ceilingLevel);%,Tx.xyz);
             
             wall.xyz1 = wallxyz1;
             wall.xyz2 = wallxyz2;
@@ -236,79 +257,10 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                 
             end
             wallRelativePerm = 20*ones(size(wall.xyz1,1),1); % +size(ceillFloor.xyz1,1) TO DO:  Assign the permittivity manually.
-            % Producing Plan as Image
-            % finding linear mapping that maps:
-            % boundary(1,1) ---->  1
-            % boundary(1,2) ---->  mesh.xNodeNum .* imageCGScale
-            % map = alpha .* (x) + beta, where alpha is the expantion fac & beta is shift
-            alpha.x = (1 - obj.n_gridpoints_x.* obj.imageCGScale)./(obj.boundary(1,1) - obj.boundary(1,2));
-            beta.x  = 1 - (obj.boundary(1,1) .* alpha.x);
             
-            alpha.y = (1 - obj.n_gridpoints_y.* obj.imageCGScale)./(obj.boundary(2,1) - obj.boundary(2,2));
-            beta.y  = 1 - (obj.boundary(2,1) .* alpha.y);
-            
-            
-            imageBoundary(1,:) = round(alpha.x .* obj.boundary(1,:) + beta.x);
-            imageBoundary(2,:) = round(alpha.y .* obj.boundary(2,:) + beta.y);
-            
-            % Shifting all the walls and Tx position
-            imageWalls.x = (reshape(round((alpha.x .* [wall.xyz1(:,1); wall.xyz2(:,1);wall.xyz3(:,1);wall.xyz4(:,1)]) + beta.x),size(wall.xyz1,1),4));
-            imageWalls.y = (reshape(round((alpha.y .* [wall.xyz1(:,2); wall.xyz2(:,2);wall.xyz3(:,2);wall.xyz4(:,2)]) + beta.y),size(wall.xyz1,1),4));
-            imageTx.xy(:,1) = round((alpha.x .* v_xy_tx(1)) + beta.x);
-            imageTx.xy(:,2) = round((alpha.y .* v_xy_tx(2)) + beta.y);
-            
-            structImage = false(imageBoundary(2,2),imageBoundary(1,2));
-            
-            if exist('measurementLocationXyz','var')
-                measLoc.xy(:,1) = round((alpha.x .* measurementLocationXyz(:,1)) + beta.x);
-                measLoc.xy(:,2) = round((alpha.y .* measurementLocationXyz(:,2)) + beta.y);
-                for i = 1:size(measurementLocationXyz,1)
-                    structImage(measLoc.xy(i,1),measLoc.xy(i,2)) = 1;
-                end
-            end
-            
-            
-            for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1)
-                structImage(imageTx.xy(i,1),imageTx.xy(i,2)) = 1;
-            end
-            
-            % structImage =  imdilate(structImage,strel('disk',3));
-            
-            if exist('MATLABStructMode','var')
-                if MATLABStructMode == 1
-                    for j = 1:(size(wall.xyz1,1) - size(ceillFloor.xyz1,1))
-                        for i = 1:3
-                            [wallC,wallR] = bresenham(imageWalls.x(j,i),imageWalls.y(j,i),imageWalls.x(j,i+1),imageWalls.y(j,i+1)); %LOS between Tx &Rx
-                            for k = 1:numel(wallC)
-                                structImage(wallC(k),wallR(k)) = 1;
-                            end
-                        end
-                    end
-                end
-            else
-                for j = 1:size(wall.xyz1,1)
-                    for i = 1:3
-                        [wallC,wallR] = bresenham(imageWalls.x(j,i),imageWalls.y(j,i),imageWalls.x(j,i+1),imageWalls.y(j,i+1)); %LOS between Tx &Rx
-                        for k = 1:numel(wallC)
-                            structImage(wallC(k),wallR(k)) = 1;
-                        end
-                    end
-                end
-            end
-            
-            
-            
-            
-            if obj.demoMode ==1
-                % The following two lines were put into the if clause
-                % to save computation when we generate many channel gains
-                structImage = structImage(1:imageBoundary(1,2),1:imageBoundary(2,2));
-                structImage = imrotate(structImage,90); % ONE OF THE CRITICAL LINES
-                
-                figure
-                imshow(structImage)
-            end
-            
+            %% Removed a code section that was intended to generate an image
+            % representing the walls
+                       
             %% Defining a Finite Panel (wall)
             
             for i = 1:size(wall.xyz1,1)
@@ -321,7 +273,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             end
             
             %% 3D Formation of the Structure
-            if obj.demoMode == 1
+            if obj.demoMode == 1 %probably won't work
                 figure
                 wall.X = [wall.xyz1(:,1)';wall.xyz2(:,1)';wall.xyz3(:,1)';wall.xyz4(:,1)'];
                 wall.Y = [wall.xyz1(:,2)';wall.xyz2(:,2)';wall.xyz3(:,2)';wall.xyz4(:,2)'];
@@ -329,7 +281,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                 wall.C = zeros(size(wall.X));
                 fill3(wall.X, wall.Y, wall.Z,wall.C)
                 hold on
-                for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1)
+                for i = 1:size(Tx.xyz,1)
                     plot3(Tx.xyz(i,1),Tx.xyz(i,2),Tx.xyz(i,3),'LineStyle','none','Marker','*','Color','Red');
                 end
                 %             pause(eps) % to show the 3D structure
@@ -425,10 +377,25 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             % tic
             
             if obj.optimizationMode == 1
+                error 'this branch not tested'
                 Rx.xyz = Rx.xyz(locationIndex,:);
             else
                 %     Rx.xyz = [reshape(X,[],1,1),reshape(Y,[],1,1),reshape(Z,[],1,1)];
-                Rx.xyz =[v_xy_rx(1),v_xy_rx(2),obj.zr];
+                if numel(v_xyz_rx)==3
+                    Rx.xyz = v_xyz_rx(:)';
+                elseif numel(v_xyz_rx)==2
+                    Rx.xyz =[v_xyz_rx(1), v_xyz_rx(2), obj.z_rx_default];
+                else
+                    error 'dimensionality of the receiver position should be 2 or 3'
+                end
+                
+                if numel (v_xyz_tx) == 3
+                    Tx.xyz = v_xyz_rx(:)';
+                elseif numel(v_xyz_tx) == 2
+                    Tx.xyz = [v_xyz_tx(1), v_xyz_tx(2), obj.z_tx_default];
+                else
+                    error 'dimensionality of the transmitter position should be 2 or 3'
+                end
             end
             
             
@@ -439,8 +406,8 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             
             
             % Distance Of TX(s) From Every Mesh Node (RXi), Its vector and unit vector
-            for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1)
-                RxTx.vec.xyz(:,1:3,i) = repmat([v_xy_tx(1) v_xy_tx(2) obj.zt],size(Rx.xyz,1),1) - Rx.xyz;
+            for i = 1:size(Tx.xyz,1)
+                RxTx.vec.xyz(:,1:3,i) = repmat(Tx.xyz,size(Rx.xyz,1),1) - Rx.xyz;
                 RxTx.dist(:,1,i) = sqrt(sum(RxTx.vec.xyz(:,1:3,i).^2,2));
                 RxTx.unitVec.xyz(:,1:3,i) = RxTx.vec.xyz(:,1:3,i) ./ repmat(RxTx.dist(:,1,i),1,3);
             end
@@ -453,13 +420,13 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             
             
             
-            for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1)
+            for i = 1:size(Tx.xyz,1)
                 % Finding Projection of Tx on each panel https://en.wikipedia.org/wiki/Line%E2%80%93plane_intersection
-                Tx.wallProj.xyz(:,:,i) = repmat((dot((wall.xyz1 - repmat([v_xy_tx(1) v_xy_tx(2) obj.zt],size(wall.xyz1,1),1)),wall.unitNormal.xyz,2)...
-                    ./dot(wall.unitNormal.xyz,wall.unitNormal.xyz,2)),1,3).* wall.unitNormal.xyz + repmat([v_xy_tx(1) v_xy_tx(2) obj.zt],size(wall.unitNormal.xyz,1),1);
+                Tx.wallProj.xyz(:,:,i) = repmat((dot((wall.xyz1 - repmat(Tx.xyz,size(wall.xyz1,1),1)),wall.unitNormal.xyz,2)...
+                    ./dot(wall.unitNormal.xyz,wall.unitNormal.xyz,2)),1,3).* wall.unitNormal.xyz + repmat(Tx.xyz,size(wall.unitNormal.xyz,1),1);
                 % Calculating the reflection (mirror) of Tx accross each panel
-                Tx.wallReflec.xyz(:,:,i) = repmat([v_xy_tx(1) v_xy_tx(2) obj.zt],size(wall.unitNormal.xyz,1),1) + 2.* (Tx.wallProj.xyz(:,:,i)...
-                    - repmat([v_xy_tx(1) v_xy_tx(2) obj.zt],size(wall.unitNormal.xyz,1),1));
+                Tx.wallReflec.xyz(:,:,i) = repmat(Tx.xyz,size(wall.unitNormal.xyz,1),1) + 2.* (Tx.wallProj.xyz(:,:,i)...
+                    - repmat(Tx.xyz,size(wall.unitNormal.xyz,1),1));
             end
             
             
@@ -479,7 +446,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             %%
             
             % Line Vector Between TxReflection & Rx
-            for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1) %
+            for i = 1:size(Tx.xyz,1) %
                 for j = 1:size(Tx.wallReflec.xyz,1)
                     % 4th dimension represents the Tx
                     Rx2TxRefl.vec.xyz(:,1:3,j,i) = repmat(Tx.wallReflec.xyz(j,:,i),size(Rx.xyz,1),1) - Rx.xyz;
@@ -516,21 +483,21 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                 
                 Tx2RxWalljd = zeros(size(wall.xyz1,1),1);
                 Tx2RxWalljxyz = zeros(size(wall.xyz1,1),3);
-                Tx2RxVec = zeros(size([v_xy_tx(1) v_xy_tx(2) obj.zt],1),3);
+                Tx2RxVec = zeros(size(Tx.xyz,1),3);
                 Tx2RxIntersectingWalls = zeros(size(Tx2RxWalljd));
                 Rx.LosCG = zeros(size(Rx.xyz,1),1);
                 
                 for k = 1:size(Rx.xyz,1)
-                    for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1)
-                        Tx2RxVec(i,:) = Rx.xyz(k,:) - [v_xy_tx(1) v_xy_tx(2) obj.zt]; % i index is not really needed-
+                    for i = 1:size(Tx.xyz,1)
+                        Tx2RxVec(i,:) = Rx.xyz(k,:) - Tx.xyz; % i index is not really needed-
                         Tx2RxIntersectingWalls = zeros(size(Tx2RxWalljd));
                         incidentAngle = zeros(size(Tx2RxWalljd));
                         tempFresnelCoeff = ones(size(Tx2RxWalljd));
                         for j = 1:size(wall.xyz1,1)
                             % find intersection with each wall and validate it
-                            Tx2RxWalljd(j) = dot(wall.xyz1(j,:) - [v_xy_tx(1) v_xy_tx(2) obj.zt], wall.normal.xyz(j,:),2) ./ dot(Tx2RxVec(i,:) , wall.normal.xyz(j,:),2); % Scalar value of the line between TX & Rx
+                            Tx2RxWalljd(j) = dot(wall.xyz1(j,:) - Tx.xyz, wall.normal.xyz(j,:),2) ./ dot(Tx2RxVec(i,:) , wall.normal.xyz(j,:),2); % Scalar value of the line between TX & Rx
                             if (Tx2RxWalljd(j)<1 && Tx2RxWalljd(j)>0)
-                                Tx2RxWalljxyz(j,:) = Tx2RxWalljd(j) .* Tx2RxVec(i,:) + [v_xy_tx(1) v_xy_tx(2) obj.zt]; % Intersection point with wall j
+                                Tx2RxWalljxyz(j,:) = Tx2RxWalljd(j) .* Tx2RxVec(i,:) + Tx.xyz; % Intersection point with wall j
                                 if (prod(wall.minMax.x(j,:) - Tx2RxWalljxyz(j,1),2) < eps) && (prod(wall.minMax.y(j,:)...
                                         - Tx2RxWalljxyz(j,2),2) < eps) && (prod(wall.minMax.z(j,:) - Tx2RxWalljxyz(j,3),2) < eps)
                                     % At this point the intersection is definite
@@ -579,8 +546,8 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
             
             if obj.reflectionFlag == 1
                 for k = 1:size(Rx.xyz,1)
-                    Rx.distFirstRefl=zeros(1,size([v_xy_tx(1) v_xy_tx(2) obj.zt],1));
-                    for i = 1:size([v_xy_tx(1) v_xy_tx(2) obj.zt],1)
+                    Rx.distFirstRefl=zeros(1,size(Tx.xyz,1));
+                    for i = 1:size(Tx.xyz,1)
                         Rx.reflecjCG = zeros(1,size(Tx.wallReflec.xyz,1));
                         firstOrderRef=zeros(1,size(Tx.wallReflec.xyz,1)); % computes reflections from all walls
                         for j = 1:size(Tx.wallReflec.xyz) % this is same as size(wall.xyz1,1)
@@ -617,7 +584,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                                     
                                     
                                     % 2- now that there is reflection, lets find the walls between the reflection paths
-                                    Tx2ReflectPointj = reflectPointj - [v_xy_tx(1) v_xy_tx(2) obj.zt];
+                                    Tx2ReflectPointj = reflectPointj - Tx.xyz;
                                     reflectPointj2Rx = Rx.xyz(k,:) - reflectPointj;
                                     Tx2ReflectPointjDist = sqrt(sum(Tx2ReflectPointj.^2,2));
                                     reflectPointj2RxDist = sqrt(sum(reflectPointj2Rx.^2,2));
@@ -671,11 +638,11 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                                     tempReflpoint2RxTransCoeff = ones(size(wall.xyz1,1),1);
                                     for s = 1:size(wall.xyz1,1)
                                         % Finding Scalar value of intersection lines
-                                        Tx2ReflectPointjWallsd = dot(wall.xyz1(s,:) - [v_xy_tx(1) v_xy_tx(2) obj.zt],wall.normal.xyz(s,:),2)./dot(Tx2ReflectPointj,wall.normal.xyz(s,:),2);
+                                        Tx2ReflectPointjWallsd = dot(wall.xyz1(s,:) - Tx.xyz,wall.normal.xyz(s,:),2)./dot(Tx2ReflectPointj,wall.normal.xyz(s,:),2);
                                         reflectPointj2Rxd = dot(wall.xyz1(s,:) - reflectPointj,wall.normal.xyz(s,:),2) ./ dot(reflectPointj2Rx,wall.normal.xyz(s,:),2);
                                         % Checking for finite plane intersection
                                         if (Tx2ReflectPointjWallsd < 1 && Tx2ReflectPointjWallsd > 0 && abs(Tx2ReflectPointjWallsd - 1) > eps)
-                                            Tx2ReflectPointjWallsxyz = Tx2ReflectPointjWallsd .* Tx2ReflectPointj + [v_xy_tx(1) v_xy_tx(2) obj.zt];
+                                            Tx2ReflectPointjWallsxyz = Tx2ReflectPointjWallsd .* Tx2ReflectPointj + Tx.xyz;
                                             if(prod(wall.minMax.x(s,:) - Tx2ReflectPointjWallsxyz(1,1),2) < eps) && (prod(wall.minMax.y(s,:)...
                                                     - Tx2ReflectPointjWallsxyz(1,2),2) < eps) && (prod(wall.minMax.z(s,:) - Tx2ReflectPointjWallsxyz(1,3),2) < eps)
                                                 % At this point wall s in between
@@ -743,6 +710,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                                 end % end of if reflection exist
                                 % Ony where reflections took place
                             end % end of d check for reflection
+                            %% These lines were added by Yves
                             if isnan(Rx.distFirstRefl(i))
                                 firstOrderRef(j)=0;
                             else
@@ -776,7 +744,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                         second2RxReflPintTransCoeff = ones(size(wall.xyz1,1),1);
                         Rx.SecondReflWallKCG = zeros(size(wall.xyz1,1),1);
                         for k = 1:size(Tx.secondReflecWallj.xyz,1)
-                            if (sum(Tx.secondReflecWallj.xyz(k,:,j) ~= [v_xy_tx(1) v_xy_tx(2) obj.zt]) ~= 0) % checks if the Tx.secondReflecWallj lies on the Tx
+                            if (sum(Tx.secondReflecWallj.xyz(k,:,j) ~= Tx.xyz) ~= 0) % checks if the Tx.secondReflecWallj lies on the Tx
                                 TxSecondRef2Rx.vec.xyz = Rx.xyz(i,:) - Tx.secondReflecWallj.xyz(k,:,j);
                                 TxSecondRef2Rx.dist = sqrt(sum(TxSecondRef2Rx.vec.xyz.^2,2));
                                 
@@ -844,7 +812,7 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                                                 % The path of second reflection breaks down into 3 parts. Tx to First Reflection point. First to second
                                                 % Reflection point. Second reflection point to RX. For each path, walls in between need ot be checked
                                                 
-                                                Tx2FirstReflPoint.vec.xyz = firstReflecPointj - [v_xy_tx(1) v_xy_tx(2) obj.zt];
+                                                Tx2FirstReflPoint.vec.xyz = firstReflecPointj - Tx.xyz;
                                                 distDoubleReflTx2FirstPoint=sqrt(sum(Tx2FirstReflPoint.vec.xyz.^2,2));
                                                 firstReflPoint2SecondReflPoint.vec.xyz  = secondReflectPointK - firstReflecPointj;
                                                 distDoubleReflFirstPoint2SecondPoint=sqrt(sum(firstReflPoint2SecondReflPoint.vec.xyz.^2,2));
@@ -854,11 +822,11 @@ classdef MultiWallChannelGainGenerator < RayTracingGenerator
                                                 % checking number of walls between TX and firstReflectionPoint
                                                 for l = 1:size(wall.xyz1,1) % checking number of walls between TX and firstReflectionPoint
                                                     if (l ~= j) % unecessary, only for safety measures as intersection D for same wall is zero.obj
-                                                        wallLIntdTx2FirstReflPoint = dot(wall.xyz1(l,:) - [v_xy_tx(1) v_xy_tx(2) obj.zt], wall.normal.xyz(l,:),2)...
+                                                        wallLIntdTx2FirstReflPoint = dot(wall.xyz1(l,:) - Tx.xyz, wall.normal.xyz(l,:),2)...
                                                             ./ dot(Tx2FirstReflPoint.vec.xyz, wall.normal.xyz(l,:),2);
                                                         if (wallLIntdTx2FirstReflPoint < 1 && wallLIntdTx2FirstReflPoint > 0)
                                                             wallLintTx2Tx2FirstReflPoint = wallLIntdTx2FirstReflPoint .* Tx2FirstReflPoint.vec.xyz ...
-                                                                + [v_xy_tx(1) v_xy_tx(2) obj.zt];
+                                                                + Tx.xyz;
                                                             if (prod(wall.minMax.x(l,:) - wallLintTx2Tx2FirstReflPoint(1,1),2)...
                                                                     < eps) && (prod(wall.minMax.y(l,:) - wallLintTx2Tx2FirstReflPoint(1,2),2)...
                                                                     < eps) && (prod(wall.minMax.z(l,:) - wallLintTx2Tx2FirstReflPoint(1,3),2) < eps)

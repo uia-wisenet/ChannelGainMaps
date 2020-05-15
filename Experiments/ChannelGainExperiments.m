@@ -382,7 +382,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
         
         function F = experiment_1080(obj, niter)
             % This experiment function creates a dataset to be used in
-            % experiment_2060, where we want to average over a number of
+            % experiment_2080, where we want to average over a number of
             % Monte Carlo realizations
                         
             rng(1)
@@ -936,8 +936,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             v_trainPairs = v_trainTestPairs(1:100);
 %             v_testPairs  = v_trainTestPairs(101:120);
             
-            mySim.b_inParallel = 0; %!
-            v_nTrains = [50 80 120]; %![10 20 40 70 100 200];
+            mySim.b_inParallel = 1;
+            v_nTrains = [100 200 300 400 500]; %![10 20 40 70 100 200];
             %train_test_proportion = 4;
             n_test = 500;
             for i_nTrain = length(v_nTrains):-1:1
@@ -961,7 +961,6 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
             
-            keyboard
         end
         
         function F = experiment_2080(obj, niter)
