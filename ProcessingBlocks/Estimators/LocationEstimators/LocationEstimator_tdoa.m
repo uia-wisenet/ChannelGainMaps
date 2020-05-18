@@ -5,7 +5,7 @@ classdef LocationEstimator_tdoa
         Xenb % 2xN-matrix containing the source positions 
         % as column 2-vectors. 
         % The reference source is in column 1.
-        inParallel = 0
+        b_inParallel = 0
     end
     
     methods
@@ -32,7 +32,7 @@ classdef LocationEstimator_tdoa
             M = size(m_measurements, 2);
             m_estimatedLocations = zeros(2, M);
             v_locUncertainties   = zeros(1, M);
-            if obj.inParallel
+            if obj.b_inParallel
                 disp('running in parallel.')
                 parfor m = 1:M
                     [m_estimatedLocations(:,m), v_locUncertainties(m)] = ...

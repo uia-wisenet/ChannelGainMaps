@@ -11,6 +11,7 @@ classdef DatasetGenerator2
         snr_locErrors = 50;
         
         n_realizations = 1;
+        b_inParallel = 0;
 
     end
     
@@ -65,12 +66,22 @@ classdef DatasetGenerator2
             % channel gain for each pair
             v_gains = zeros(n_p,1);
             ltc2 = LoopTimeControl(n_p);
-            for i_pair = 1:n_p
-                xy_transmitter = m_locations(m_pairs(i_pair,1), :);
-                xy_receiver    = m_locations(m_pairs(i_pair,2), :);
-                v_gains(i_pair) = obj.generator.calculateCGBetween(...
-                    xy_transmitter, xy_receiver);
-                ltc2.go(i_pair);
+            if obj.b_inParallel
+                disp ('Calculating channel gains in parallel')
+                parfor i_pair = 1:n_p
+                    xy_transmitter = m_locations(m_pairs(i_pair,1), :);
+                    xy_receiver    = m_locations(m_pairs(i_pair,2), :);
+                    v_gains(i_pair) = obj.generator.calculateCGBetween(...
+                        xy_transmitter, xy_receiver);
+                end
+            else
+                for i_pair = 1:n_p
+                    xy_transmitter = m_locations(m_pairs(i_pair,1), :);
+                    xy_receiver    = m_locations(m_pairs(i_pair,2), :);
+                    v_gains(i_pair) = obj.generator.calculateCGBetween(...
+                        xy_transmitter, xy_receiver);
+                    ltc2.go(i_pair);
+                end
             end
             str_out.v_trueGains = v_gains;
             av_channelGains = repmat(v_gains, [1 1 obj.n_realizations]);
@@ -88,14 +99,22 @@ classdef DatasetGenerator2
                 for i_r = 1:obj.n_realizations
                     str_out.am_features_LB(:,:,i_r) = ...
                         obj.featureExtractor.locBasedExtract(...
-                        t3_receivedPilotSignals);  % Estim. time diff. of arrival
+                        t4_receivedPilotSignals(:,:,:,i_r));  
+                       %^ Estim. time diff. of arrival
                 end
-                for i_r = 1:obj.n_realizations
-                    disp 'estimating locations at train set...'
-                    am_estimatedLocations = zeros(n_l, 2, obj.n_realizations);
-                    av_locUncertainties = zeros(n_l, 1, obj.n_realizations);
-                    [am_estimatedLocations(:,:,i_r), av_locUncertainties(:,:,i_r)] = ...
-                        obj.locEstimator.estimateLocations(str_out.m_features_LB);
+                disp 'estimating locations at train set...'
+                am_estimatedLocations = zeros(n_l, 2, obj.n_realizations);
+                av_locUncertainties = zeros(n_l, 1, obj.n_realizations);
+                if obj.b_inParallel
+                    parfor i_r = 1:obj.n_realizations
+                        [am_estimatedLocations(:,:,i_r), av_locUncertainties(:,:,i_r)] = ...
+                            obj.locEstimator.estimateLocations(str_out.am_features_LB(:,:,i_r));
+                    end   
+                else
+                    for i_r = 1:obj.n_realizations                        
+                        [am_estimatedLocations(:,:,i_r), av_locUncertainties(:,:,i_r)] = ...
+                            obj.locEstimator.estimateLocations(str_out.am_features_LB(:,:,i_r));
+                    end
                 end
             end
             if obj.b_syntheticLocError

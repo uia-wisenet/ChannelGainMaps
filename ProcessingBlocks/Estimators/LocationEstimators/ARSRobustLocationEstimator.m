@@ -1,7 +1,7 @@
 classdef ARSRobustLocationEstimator < LocationEstimator_tdoa
     %Averaging Reference Sources to obtain a Robust Location Estimate
 properties
-    param_rho       % upper bound on the NLOS bias
+    param_rho(1,1)       % upper bound on the NLOS bias
     b_verbose = 0
 end
 
