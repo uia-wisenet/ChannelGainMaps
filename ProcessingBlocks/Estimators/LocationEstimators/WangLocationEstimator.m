@@ -22,7 +22,8 @@ classdef WangLocationEstimator < LocationEstimator_tdoa
 %             estimatedLocationRobustSDR=ue_loc_calc_RobustSDR;
 %         end
         
-        function v_estimatedLocation = estimateOneLocation(obj,  v_d)
+        function [v_estimatedLocation, locUncertainty] = ...
+                estimateOneLocation(obj,  v_d)
             % Solves the SDP Relaxation of the Robust Location Estimation
             % by Wang et al.
             % Inputs:
@@ -46,8 +47,7 @@ classdef WangLocationEstimator < LocationEstimator_tdoa
                     -2*v_d(ind_s_tdoa);
                     zeros(n_sources-ind_s_tdoa-1,1)   ];
             end
-            % Call method implemented by Gang Wang, see original file:
-            % sdp_ce.m
+            % Call method implemented by Gang Wang. original file: sdp_ce.m
             y= sdp_ce(obj.Xenb, v_d, b, n_sources, obj.param_rho, a_);
             v_estimatedLocation = y(1:2);
             % v_r_out = y(3:end);
@@ -58,6 +58,7 @@ classdef WangLocationEstimator < LocationEstimator_tdoa
 %             arle.param_rho = obj.rho;
 %             m_s= obj.Xenb;
 %             [x_out, ~, ~] = arle.solveRelaxed(v_d, m_s);
+            locUncertainty = nan; % TODO try to estimate uncertainty
         end
     end
 end

@@ -16,13 +16,15 @@ classdef DiverseLocationEstimator < LocationEstimator_tdoa
         function obj = DiverseLocationEstimator(ch_type)
             obj.ch_type = ch_type;
         end
-        function v_estimatedLocation = estimateOneLocation(obj,v_measurements)
+        function [v_estimatedLocation, locUncertainty] = ...
+                estimateOneLocation(obj,v_measurements)
             % INPUT:  (N-1)-vector containing the TDOA measurements
             % OUTPUT: 2-vector     containing the location estimate
             switch(obj.ch_type)
                 case 'IRWSRDLS'
                     v_estimatedLocation = ...
                         obj.estimateLocationIRWSRDLS(v_measurements);
+                    locUncertainty = nan;
                 otherwise
                     error 'Not implemented yet (just needed to link the corresponding method)'
             end

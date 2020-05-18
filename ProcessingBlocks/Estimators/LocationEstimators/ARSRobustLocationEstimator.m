@@ -2,6 +2,7 @@ classdef ARSRobustLocationEstimator < LocationEstimator_tdoa
     %Averaging Reference Sources to obtain a Robust Location Estimate
 properties
     param_rho       % upper bound on the NLOS bias
+    b_verbose = 0
 end
 
 methods
@@ -54,8 +55,10 @@ methods
         
     end
     
-    function v_estimatedLocation = estimateOneLocation(obj, v_measurements)
+    function [v_estimatedLocation, locUncertainty] = ...
+            estimateOneLocation(obj, v_measurements)
         v_estimatedLocation = obj.solveRelaxed(v_measurements);
+        locUncertainty = nan; % TODO! try to measure location uncertainty
     end
     
     function [v_x_hat, v_r_out, value] = solveRelaxed(obj, ...
@@ -80,7 +83,7 @@ methods
                 %relaxed constraint
             end
             variable v_valueForRefSource(N)
-            disp 'Conforming constraints...'
+            if obj.b_verbose, disp 'Conforming constraints...'; end
             b_faster = 1;
             if b_faster
                 expression m_value_0(N,N)
@@ -111,7 +114,7 @@ methods
             v_valueForRefSource >= value_0';   %#ok<VUNUS>
             v_valueForRefSource >= value_rho'; %#ok<VUNUS>
 
-            disp 'Solving relaxed problem...'
+            if obj.b_verbose, disp 'Solving relaxed problem...'; end
             v_precValues = cvx_precision;
             lambda = v_precValues(3)./trace(cov(m_s'));
             minimize(sum(v_valueForRefSource)/N + lambda*sum_square(v_r));
