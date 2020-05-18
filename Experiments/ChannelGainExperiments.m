@@ -382,8 +382,10 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
         
         function F = experiment_1080(obj, niter)
             % This experiment function creates a dataset to be used in
-            % experiment_2080, where we want to average over a number of
-            % Monte Carlo realizations
+            % experiment_2080, 
+            % new environment with 7 walls, and half of the map has free-
+            % space propagation conditions.
+            % 10 Realizations to conform Monte Carlo runs
                         
             rng(1)
             
@@ -398,7 +400,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             maxSamplesPerPilot = 12;
             
             my_datasetGen = DatasetGenerator2;
-            my_datasetGen.b_syntheticLocEstimate = 1;
+            my_datasetGen.b_syntheticLocEstimate = 0;
             my_datasetGen.b_syntheticLocError = 1;
             
             generator_tmp = MultiWallChannelGainGenerator;
@@ -420,7 +422,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             my_datasetGen.featureExtractor = FeatureExtractor;
             my_datasetGen.featureExtractor.sampling_period = samplingPeriod;
             
-            my_datasetGen.locEstimator = WangLocationEstimator;
+            my_datasetGen.locEstimator = ARSRobustLocationEstimator;
+            my_datasetGen.locEstimator.param_rho = 8;
+            my_datasetGen.locEstimator.b_inParallel = 0;
             my_datasetGen.locEstimator.Xenb = m_source_loc;
             
             % define grid:
@@ -456,8 +460,10 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             v_indicesMap = 1:size(m_pairsMap,1);
 %             v_indicesTrain = (size(m_pairsMap,1)+1):size(m_pairsGen,1);
             
-            % the Mambo line:
+            
             my_datasetGen.n_realizations = 10;
+            my_datasetGen.b_inParallel = 1;
+            % the Mambo line:
             str_dataset = my_datasetGen.generate(m_locations, m_pairsTrain);
             %M = an.create(repmat(str_dataset.v_channelGains, [1 3]));           
             
