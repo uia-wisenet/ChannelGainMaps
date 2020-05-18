@@ -73,10 +73,7 @@ classdef Simulator4 < Simulator3
                     v_den(ii) = str_NMSE_den(ii).(s_eNames(i_e));
                 end
                 str_NMSE.(s_eNames(i_e)) = mean(v_num)/mean(v_den);
-            end
-            
+            end            
         end
-            
-
     end
 end

@@ -1074,7 +1074,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             %mySim.locBasedEstimator.Xenb = m_source_loc;
                         
             mySim.hybridEstimator = HybridEstimator2;
-            mySim.hybridEstimator.b_debugPlots = 1;
+            mySim.hybridEstimator.b_debugPlots = 0;
             mySim.hybridEstimator.max_itrs_alternating = 40;
             mySim.hybridEstimator.b_tryToBalance = 1;
 %             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
@@ -1088,7 +1088,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             v_testPairs  = v_trainTestPairs(101:120);
             
             mySim.b_inParallel = 1;
-            v_nTrains = [200:300:2000];
+            v_nTrains = 2000:-300:200;
             %train_test_proportion = 4;
             n_test = 1000;
             for i_nTrain = length(v_nTrains):-1:1
