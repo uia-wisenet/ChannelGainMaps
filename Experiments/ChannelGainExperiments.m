@@ -1041,6 +1041,79 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             
             keyboard
         end
+        
+        function F = experiment_2090(obj, niter)
+            % Same as 2070, but with dataset generated in 1080
+            str_dataset = load ('datasets/dataset_ChannelGain_1080');
+            % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
+            
+            mySim = Simulator4;
+            mySim.b_augmentTraining = 1;
+            
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_cvLambdas_hybrid = 0;
+            
+            mySim.locFreeEstimator = LocationFreeEstimator;
+%             mySim.locFreeEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLF^2));
+%             mySim.locFreeEstimator.regularizationParameter = lambdaLF;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            mySim.v_lambdas_toTryLF = logspace(-4, -2, 10 );   % 4e-4; % 
+            mySim.v_sigmas_toTryLF  = linspace(50, 130, 10);   % 67;   %
+            
+            mySim.v_lambdas_toTryLB = logspace(-4, -2,  10);   % 4e-4; %   
+            mySim.v_sigmas_toTryLB  = linspace(20, 40, 10);    % 25;   %
+                
+            mySim.locBasedEstimator = LocationBasedEstimator;
+            %mySim.locEstimator = WangLocationEstimator;
+%             mySim.locBasedEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
+%             mySim.locBasedEstimator.regularizationParameter = lambdaLB;
+            %mySim.locBasedEstimator.Xenb = m_source_loc;
+                        
+            mySim.hybridEstimator = HybridEstimator2;
+            mySim.hybridEstimator.b_debugPlots = 1;
+            mySim.hybridEstimator.max_itrs_alternating = 40;
+            mySim.hybridEstimator.b_tryToBalance = 1;
+%             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+%             mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
+%             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
+%             mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
+
+%             n_allPairs = size(str_dataset.m_pairs, 1);
+%             v_trainTestPairs = randperm(n_allPairs, 120)';
+%             v_trainPairs = v_trainTestPairs(1:100);
+%             v_testPairs  = v_trainTestPairs(101:120);
+            
+            mySim.b_inParallel = 1;
+            v_nTrains = [200:300:2000];
+            %train_test_proportion = 4;
+            n_test = 1000;
+            for i_nTrain = length(v_nTrains):-1:1
+                mySim.n_train = v_nTrains(i_nTrain);
+                %mySim.n_test  = v_nTrains(i_nTrain)*train_test_proportion;
+                mySim.n_test = n_test;
+                str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
+            end
+            
+            tb_NMSE = struct2table(str_NMSE);
+            varNames = tb_NMSE.Properties.VariableNames;
+
+            save results_2090
+
+            F = GFigure;
+            F.m_X = v_nTrains;
+            F.m_Y = tb_NMSE.Variables';
+            F.ch_interpreter = 'none';
+            F.c_legend = varNames;
+            F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
+            F.ch_xlabel = 'Number of training samples';
+            F.ch_ylabel = 'NMSE';
+            
+            keyboard
+        end
 
     end
 end
