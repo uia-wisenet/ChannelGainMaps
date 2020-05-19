@@ -15,26 +15,19 @@ classdef CrossValEnabledTrainer
             [m_lambdas, m_sigmas] = ndgrid(v_lambdas, v_sigmas);
             m_crossValScores = zeros(size(m_lambdas));
             assert( not(ishandle(obj.estimator)));
-            if obj.b_cv_inParallel, error 'not implemented yet', end
+            if obj.b_cv_inParallel
+                warning 'not tested yet'
+                parfor ii = 1:numel(m_lambdas)  
+                    v_scoresFolds = obj.crossValidate_one(m_lambdas(ii), ...
+                        m_sigmas(ii), m_features, v_c2m_metric, cv_obj);
+                    m_crossValScores(ii) = mean(v_scoresFolds)/...
+                        mean((v_c2m_metric - mean(v_c2m_metric)).^2);
+                end
+            end
             ltc = LoopTimeControl(numel(m_lambdas));
             for ii = 1:numel(m_lambdas)                                    
-                my_estimator = obj.estimator;
-                my_estimator.regularizationParameter = m_lambdas(ii);
-                my_estimator.kernel = @(x, y) ...
-                    exp(-vecnorm(x-y, 2, 1).^2/(m_sigmas(ii)^2)); 
-                % we had norms instead of vecnorm here before
-                v_scoresFolds = zeros(obj.n_folds, 1);
-                for i_fold = 1:obj.n_folds
-                    obj_now = obj;
-                    obj_now.estimator = my_estimator;
-                    fkm = obj_now.train(...
-                        m_features( :, cv_obj.training(i_fold), : ), ...
-                        v_c2m_metric(  cv_obj.training(i_fold)) );
-                    v_c2m_test = fkm.evaluate(  ...
-                        m_features( :, cv_obj.test(i_fold), : )  );
-                    v_scoresFolds(i_fold) = mean(...
-                    (v_c2m_test(:) - v_c2m_metric(cv_obj.test(i_fold))).^2);
-                end
+                v_scoresFolds = obj.crossValidate_one(m_lambdas(ii), ...
+                    m_sigmas(ii), m_features, v_c2m_metric, cv_obj);
                 m_crossValScores(ii) = mean(v_scoresFolds)/...
                     mean((v_c2m_metric - mean(v_c2m_metric)).^2);
                 ltc.go(ii)
@@ -44,6 +37,26 @@ classdef CrossValEnabledTrainer
             best_sigma  = m_sigmas (best_index);
         end
         
+        function v_scoresFolds = crossValidate_one(obj, lambda, sigma, ...
+                m_features, v_c2m_metric, cv_obj)
+            my_estimator = obj.estimator;
+            my_estimator.regularizationParameter = lambda;
+            my_estimator.kernel = @(x, y) ...
+                exp(-vecnorm(x-y, 2, 1).^2/(sigma^2));
+            % we had norms instead of vecnorm here before
+            v_scoresFolds = zeros(obj.n_folds, 1);
+            for i_fold = 1:obj.n_folds
+                obj_now = obj;
+                obj_now.estimator = my_estimator;
+                fkm = obj_now.train(...
+                    m_features( :, cv_obj.training(i_fold), : ), ...
+                    v_c2m_metric(  cv_obj.training(i_fold)) );
+                v_c2m_test = fkm.evaluate(  ...
+                    m_features( :, cv_obj.test(i_fold), : )  );
+                v_scoresFolds(i_fold) = mean(...
+                    (v_c2m_test(:) - v_c2m_metric(cv_obj.test(i_fold))).^2);
+            end
+        end
     end
 end
 
