@@ -20,6 +20,8 @@ classdef Simulator3
         b_augmentTraining = 0;
         
         b_meshCVSurfaces = 0;
+        
+        b_cv_inParallel = 0;
     end
     
     methods
@@ -104,6 +106,7 @@ classdef Simulator3
             if obj.b_trainLocFree
                 disp ('Training LocFree...')
                 my_locFreeTrainer = LocFreeTrainer;
+                my_locFreeTrainer.b_cv_inParallel = obj.b_cv_inParallel;
                 my_locFreeTrainer.estimator = obj.locFreeEstimator;
                 %
                 
@@ -162,6 +165,7 @@ classdef Simulator3
             if obj.b_trainLocBased
                 disp ('Training LocBased...')
                 my_locBasedTrainer = LocBasedTrainer;
+                my_locBasedTrainer.b_cv_inParallel = obj.b_cv_inParallel;
                 my_locBasedTrainer.estimator = obj.locBasedEstimator;
                 %
                 n_values_toTry = numel(obj.v_lambdas_toTryLB)*numel(obj.v_sigmas_toTryLB);
