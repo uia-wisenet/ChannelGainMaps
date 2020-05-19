@@ -16,21 +16,21 @@ classdef CrossValEnabledTrainer
             m_crossValScores = zeros(size(m_lambdas));
             assert( not(ishandle(obj.estimator)));
             if obj.b_cv_inParallel
-                warning 'not tested yet'
                 parfor ii = 1:numel(m_lambdas)  
                     v_scoresFolds = obj.crossValidate_one(m_lambdas(ii), ...
                         m_sigmas(ii), m_features, v_c2m_metric, cv_obj);
                     m_crossValScores(ii) = mean(v_scoresFolds)/...
                         mean((v_c2m_metric - mean(v_c2m_metric)).^2);
                 end
-            end
-            ltc = LoopTimeControl(numel(m_lambdas));
-            for ii = 1:numel(m_lambdas)                                    
-                v_scoresFolds = obj.crossValidate_one(m_lambdas(ii), ...
-                    m_sigmas(ii), m_features, v_c2m_metric, cv_obj);
-                m_crossValScores(ii) = mean(v_scoresFolds)/...
-                    mean((v_c2m_metric - mean(v_c2m_metric)).^2);
-                ltc.go(ii)
+            else
+                ltc = LoopTimeControl(numel(m_lambdas));
+                for ii = 1:numel(m_lambdas)
+                    v_scoresFolds = obj.crossValidate_one(m_lambdas(ii), ...
+                        m_sigmas(ii), m_features, v_c2m_metric, cv_obj);
+                    m_crossValScores(ii) = mean(v_scoresFolds)/...
+                        mean((v_c2m_metric - mean(v_c2m_metric)).^2);
+                    ltc.go(ii)
+                end
             end
             [min_value, best_index] = min(m_crossValScores(:));
             best_lambda = m_lambdas(best_index);
