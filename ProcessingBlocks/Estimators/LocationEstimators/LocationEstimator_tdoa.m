@@ -26,23 +26,23 @@ classdef LocationEstimator_tdoa
             % This is the method of the superclass - can be overridden
             % with code that estimates multiple locations efficiently
             % INPUT:  (N-1)xM matrix containing M sets of TDOA measurements
-            % OUTPUT: 2xM matrix     containing M location estimates
+            % OUTPUT: Mx2 matrix     containing M location estimates
             % M can be seen as the number of UEs
             
-            M = size(m_measurements, 2);
-            m_estimatedLocations = zeros(2, M);
-            v_locUncertainties   = zeros(1, M);
+            n_loc = size(m_measurements, 2);
+            m_estimatedLocations = zeros(n_loc, 2);
+            v_locUncertainties   = zeros(n_loc, 1);
             if obj.b_inParallel
                 disp('running in parallel.')
-                parfor m = 1:M
-                    [m_estimatedLocations(:,m), v_locUncertainties(m)] = ...
+                parfor m = 1:n_loc
+                    [m_estimatedLocations(m,:), v_locUncertainties(m)] = ...
                         obj.estimateOneLocation(m_measurements(:, m)); ...
                         %#ok<PFBNS>                    
                 end
             else
-                ltc = LoopTimeControl(M);
-                for m = 1:M
-                    [m_estimatedLocations(:,m), v_locUncertainties(m)] = ...
+                ltc = LoopTimeControl(n_loc);
+                for m = 1:n_loc
+                    [m_estimatedLocations(m,:), v_locUncertainties(m)] = ...
                         obj.estimateOneLocation(m_measurements(:, m)); 
                     ltc.go(m);
                 end

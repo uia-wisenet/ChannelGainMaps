@@ -22,7 +22,7 @@ classdef DatasetGenerator2
         function [str_out] = generate (obj, m_locations, m_pairs)
             % m_locations is an Nl x 2 matrix, where each row contains the x
             % and y coordinates of each location to have into account
-            % m_pairs is an Np x 2 matrx, where each row contains
+            % m_pairs is an Np x 2 matrix, where each row contains
             % the indices (respective to the ordering in m_locations) for 
             % the transmitter and receiver
             
@@ -118,6 +118,9 @@ classdef DatasetGenerator2
                 end
             end
             if obj.b_syntheticLocError
+                v_s1 = size(m_locations);
+                v_s2 = size(am_estimatedLocations);
+                assert(isequal(v_s1(1:2), v_s2(1:2)));
                 v_locErrors_noiseless = vecnorm(m_locations - am_estimatedLocations, 2, 2);
                 av_locUncertainties = v_locErrors_noiseless ...
                     + randn(size(v_locErrors_noiseless))...
