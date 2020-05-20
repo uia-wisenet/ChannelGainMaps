@@ -68,6 +68,8 @@ classdef FeatureExtractor
             % range differences at one sensor location.
             n_ues=size(sensor_locs,2);
             n_sources=size(source_locs,2);
+            assert(size(source_locs, 1)==2);
+            assert(size(source_locs, 2)==2);
             distancesDiff=zeros(n_sources-1,n_ues);
             for ind_ue=1:n_ues
                  distancesDiff(:,ind_ue) = vecnorm(sensor_locs(:,ind_ue)-...
