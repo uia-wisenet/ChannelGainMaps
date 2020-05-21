@@ -1686,10 +1686,12 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             %train_test_proportion = 4;
             n_test = 1000;
             for i_nTrain = length(v_nTrains):-1:1
+                disp ("starting simulation with nTrain = %d" + string(i_nTrain))
                 mySim.n_train = v_nTrains(i_nTrain);
                 %mySim.n_test  = v_nTrains(i_nTrain)*train_test_proportion;
                 mySim.n_test = n_test;
                 str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
+                save results_2110_partial
             end
             
             tb_NMSE = struct2table(str_NMSE);
