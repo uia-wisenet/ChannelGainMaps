@@ -1648,6 +1648,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             mySim.b_trainLocBased = 1;
             mySim.b_trainHybrid = 1;
             mySim.b_cvLambdas_hybrid = 0;
+            mySim.b_cv_inParallel = 1;
             
             mySim.locFreeEstimator = LocationFreeEstimator;
 %             mySim.locFreeEstimator.kernel = @(x, y) ...
@@ -1681,13 +1682,14 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             v_trainPairs = v_trainTestPairs(1:100);
 %             v_testPairs  = v_trainTestPairs(101:120);
             
-            mySim.b_inParallel = 1;
+            mySim.b_inParallel = 0;
             v_nTrains = 2000:-300:200;
             %train_test_proportion = 4;
             n_test = 1000;
             for i_nTrain = length(v_nTrains):-1:1
-                disp ("starting simulation with nTrain = %d" + string(i_nTrain))
                 mySim.n_train = v_nTrains(i_nTrain);
+                disp ("starting simulation with nTrain = " + ...
+                    string(mySim.n_train))
                 %mySim.n_test  = v_nTrains(i_nTrain)*train_test_proportion;
                 mySim.n_test = n_test;
                 str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
