@@ -100,7 +100,7 @@ classdef DatasetGenerator2
                     str_out.am_features_LB(:,:,i_r) = ...
                         obj.featureExtractor.locBasedExtract(...
                         t4_receivedPilotSignals(:,:,:,i_r));  
-                       %^ Estim. time diff. of arrival
+                       %^ Estim. range difference based on time diff. of arrival
                 end
                 disp 'estimating locations at train set...'
                 am_estimatedLocations = zeros(n_l, 2, obj.n_realizations);

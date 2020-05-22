@@ -36,7 +36,9 @@ classdef FeatureExtractor
         end
         
         
-        function estimatedDistances2 = locBasedExtract(obj,pilotSignals)
+        function v_estimatedRangeDifferences = locBasedExtract(obj,pilotSignals)
+            % estimated range difference from peak of the cross-correlation
+            % of the received signals
             % this function extracts the LocB features from pilot signals.
             % Accepts input pilotSignals of size S-by-K-by-N where S is the
             % number of sources (or anchor nodes), K is the number of samples
@@ -45,7 +47,7 @@ classdef FeatureExtractor
             % LocB features extracted at one sensor location.
             n_ues=size(pilotSignals,3);
             n_sources=size(pilotSignals,1);
-            estimatedDistances2=zeros(n_sources-1,n_ues);
+            v_estimatedRangeDifferences=zeros(n_sources-1,n_ues);
             for ind_ue=1:n_ues
                 averaDistAllSources=zeros(n_sources-1,1);
                 for ind_sourceHd=2:n_sources
@@ -54,11 +56,30 @@ classdef FeatureExtractor
                     tdoaOneSource=lags(Ind_max)*obj.sampling_period;
                     averaDistAllSources(ind_sourceHd-1)=tdoaOneSource*obj.c;
                 end
-                estimatedDistances2(:,ind_ue)=averaDistAllSources;
-            end
-            
+                v_estimatedRangeDifferences(:,ind_ue)=averaDistAllSources;
+            end            
         end
         
+        function v_estimatedRangeDifferences = locBasedExtract2(obj,pilotSignals, threshold)
+            % this function extracts the LocB features from pilot signals.
+            % Accepts input pilotSignals of size S-by-K-by-N where S is the
+            % number of sources (or anchor nodes), K is the number of samples
+            % per signal, and N is the number of sensor locations.
+            % Outputs a matrix of size M-by-N where M is the number of
+            % LocB features extracted at one sensor location.
+            n_ues=size(pilotSignals,3);
+            n_sources=size(pilotSignals,1);
+            v_estimatedRangeDifferences=zeros(n_sources-1,n_ues);
+            for ind_ue=1:n_ues
+                v_toa = zeros(n_sources,1);
+                for ind_source = 1:n_sources
+                    v_toa(ind_source) = find(pilotSignals(...
+                        ind_source, :, ind_ue)>threshold, 1, 'first')*obj.sampling_period;
+                end
+                v_estimatedRangeDifferences(:,ind_ue) = (v_toa(2:end)-v_toa(1)).*obj.c;
+            end
+        end
+                      
         function distancesDiff = obtainRangeDiffer(obj,source_locs, sensor_locs)
             % this function obtains range differences from source and sensor locations.
             % Accepts inputs: (1) source locations of size 2-by-S where S is the
