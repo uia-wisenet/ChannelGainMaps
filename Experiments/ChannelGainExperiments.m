@@ -729,7 +729,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             my_datasetGen.generator.delay_estimation_offset = 2*rand;
             
             my_datasetGen.sampler = SpectrumMapSampler;
-            my_datasetGen.sampler.pilotNoiseSTD = 1e-5; % natural units
+            my_datasetGen.sampler.pilotNoiseSTD = 3e-6; % natural units
             my_datasetGen.sampler.powerNoiseSTD = 2;    % dB
             my_datasetGen.std_syntheticLocationNoise = 7;
             my_datasetGen.snr_locErrors = 20;
