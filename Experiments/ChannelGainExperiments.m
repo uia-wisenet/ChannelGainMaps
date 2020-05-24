@@ -803,9 +803,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
         end
 
         function F = experiment_1119(obj, niter)
-            % same as 1110, but playing with the alternative 
-            % option for position estimation
-                        
+            % Generates very few traning samples. Intended for representing
+            % the location estimation error (pixelwise) in experiment_3119
             rng(1)
             
             s_fileName_environment = 'modelFiles/env3.mat';           
@@ -895,6 +894,109 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.animator   = an;
             
             filename = 'dataset_ChannelGain_1119';
+            
+            %%%
+            save (['datasets' filesep filename], '-struct', 'str_dataset');
+%             
+%             figure(999); 
+%             my_datasetGen.generator.plot_environment;
+%             F = GFigure.captureCurrentFigure;
+
+        end
+
+        function F = experiment_1129(obj, niter)
+            % Generates very few traning samples. Intended for representing
+            % the location estimation error (pixelwise) in experiment_3129
+            rng(1)
+            
+            s_fileName_environment = 'modelFiles/env3.mat';           
+            selectedWalls=1:7;
+                        
+            gridSize = [20 15];
+            
+            carrier_frequency = 800e6;
+            receiverBandwidth = 40e6; % Twice as the normal bandwidth
+            samplingPeriod = 1/(receiverBandwidth);
+            maxSamplesPerPilot = 24;
+            
+            my_datasetGen = DatasetGenerator2;
+            my_datasetGen.b_syntheticLocEstimate = 0;
+            my_datasetGen.b_syntheticLocError = 1;
+            
+            generator_tmp = MultiWallChannelGainGenerator;
+            generator_tmp.f = carrier_frequency;
+            generator_tmp.sampling_period = samplingPeriod;
+            generator_tmp.maxSamplesPerPilot = maxSamplesPerPilot;
+            [my_datasetGen.generator, m_source_loc] = ...
+                baselineGenerator3(load(s_fileName_environment), ...
+                selectedWalls, generator_tmp);
+            my_datasetGen.generator.delay_estimation_offset = 2*rand;
+            
+            my_datasetGen.sampler = SpectrumMapSampler;
+            my_datasetGen.sampler.pilotNoiseSTD = 3e-6; % natural units
+            my_datasetGen.sampler.powerNoiseSTD = 2;    % dB
+            my_datasetGen.std_syntheticLocationNoise = 7;
+            my_datasetGen.snr_locErrors = 20;
+            my_datasetGen.sampler.maxSamplesPerPilot = maxSamplesPerPilot;
+
+            my_datasetGen.featureExtractor = FeatureExtractor;
+            my_datasetGen.featureExtractor.sampling_period = samplingPeriod;
+            
+            my_datasetGen.locEstimator = ARSRobustLocationEstimator;
+            my_datasetGen.locEstimator.param_rho = 12;
+            my_datasetGen.locEstimator.b_inParallel = 0;
+            my_datasetGen.locEstimator.Xenb = m_source_loc;
+            
+            % define grid:
+            x1 = my_datasetGen.generator.boundary(1,1);
+            x2 = my_datasetGen.generator.boundary(1,2);
+            y1 = my_datasetGen.generator.boundary(2,1);
+            y2 = my_datasetGen.generator.boundary(2,2);
+            [m_grid_x, m_grid_y] = ndgrid(...
+                linspace(x1, x2, gridSize(1)), ...
+                linspace(y1, y2, gridSize(2)));
+            
+            m_locations = cat(2, m_grid_x(:), m_grid_y(:));
+            n_l = numel(m_grid_x);
+            m_allPairs  = combnk(1:n_l, 2);
+            n_allPairs = size(m_allPairs, 1);
+            
+            % for the training set:
+            n_trainSamples = 2;
+            m_pairsTrain = m_allPairs(...
+                randperm(n_allPairs, n_trainSamples),:);
+
+%             % for the animation:
+%             an = Animator;
+%             an.t_grid_xy = cat(3, m_grid_x, m_grid_y);
+%             v_rows_frame = 1:2:gridSize(1);
+%             an.v_indicesTxPosition = sub2ind(size(m_grid_x), ...
+%                 v_rows_frame, ...
+%                 floor(gridSize(2)/2)*ones(1, length(v_rows_frame)));
+%             an.generator = my_datasetGen.generator;
+%             m_pairsMap = an.m_pairs();
+%              
+%             m_pairsGen = [m_pairsMap; m_pairsTrain];
+%             v_indicesMap = 1:size(m_pairsMap,1);
+%             v_indicesTrain = (size(m_pairsMap,1)+1):size(m_pairsGen,1);
+            
+            
+            my_datasetGen.n_realizations = 1;
+            my_datasetGen.b_inParallel = 1;
+            % the Mambo line:
+            str_dataset = my_datasetGen.generate(m_locations, m_pairsTrain);
+            %M = an.create(repmat(str_dataset.v_channelGains, [1 3]));           
+            
+            F = [];
+            str_dataset.datasetGen = my_datasetGen;
+            str_dataset.m_grid_x   = m_grid_x;
+            str_dataset.m_grid_y   = m_grid_y;
+%             str_dataset.v_indicesMap   = v_indicesMap;
+%             str_dataset.v_indicesTrain = v_indicesTrain;
+%             str_dataset.animator   = an;
+            
+
+            filename = 'dataset_ChannelGain_1129';
             
             %%%
             save (['datasets' filesep filename], '-struct', 'str_dataset');
@@ -1812,13 +1914,44 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
-            
+            F.figureNumber = 2110;
         end
         
         
         %% Methods that show the estimated locations and the discrepancy 
         %  in three imagesc plots
         function F = experiment_3119(obj, niter)
+            load datasets/dataset_ChannelGain_1119.mat ...
+                m_grid_x m_grid_y am_estimatedLocations m_locations datasetGen
+            i_r = 1;
+            figure(1999);
+            subplot(1, 3,1);
+                imagesc(m_grid_x(:,1), m_grid_y(1,:), reshape(am_estimatedLocations(:,1,i_r), size(m_grid_x))')
+                xlabel x
+                ylabel y
+                axis xy
+                title 'Estimated x'
+            subplot(1, 3, 2);
+                imagesc(m_grid_x(:,1), m_grid_y(1,:), reshape(am_estimatedLocations(:,2,i_r), size(m_grid_x))')
+                xlabel x
+                ylabel y
+                axis xy
+                title 'Estimated y'
+                
+            subplot(1,3,3);
+                imagesc(m_grid_x(:,1), m_grid_y(1,:), reshape(mean(vecnorm(m_locations - am_estimatedLocations(:,:,:), 2, 2), 3), size(m_grid_x))')
+                xlabel x
+                ylabel y
+                axis xy
+                title 'Norm of estimation error vector'
+            
+                hold on
+            
+                datasetGen.generator.plot_environment()
+                
+            F = GFigure.captureCurrentFigure();
+        end
+        function F = experiment_3129(obj, niter)
             load datasets/dataset_ChannelGain_1119.mat ...
                 m_grid_x m_grid_y am_estimatedLocations m_locations datasetGen
             i_r = 1;
