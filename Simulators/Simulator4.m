@@ -15,6 +15,8 @@ classdef Simulator4 < Simulator3
                 "datasetGen", "m_grid_x", "m_grid_y"];
             s_stochasticFields = ["m_features_LF", "v_noisy_channelGains", ...
                 "m_estimatedLocations", "v_locUncertainties"];
+            
+            my_randperm = randperm(n_realizationsInDataset);
             for i_r = obj.n_monteCarloRuns:-1:1
                 my_str = struct;
                 for i_name = 1:length(s_broadCastFields)
@@ -24,19 +26,23 @@ classdef Simulator4 < Simulator3
                 for i_name = 1:length(s_stochasticFields)
                     s_fieldName = s_stochasticFields(i_name);
                     t_source = str_m.("a"+s_fieldName);
-                    v_size = size(t_source);
-                    m_value = zeros(v_size(1:2));
-                    m_realizationIndices = randi(...
-                        n_realizationsInDataset, v_size(1:2));
-                    v_indices = zeros(prod(v_size(1:2)),1);
-                    for i_i=1:prod(v_size(1:2))
-                        v_indices(i_i) = sub2ind(...
-                            [prod(v_size(1:2)), n_realizationsInDataset], ...
-                            i_i, m_realizationIndices(i_i));
+                    if obj.n_monteCarloRuns<=n_realizationsInDataset
+                        my_str.(s_fieldName) = t_source(:,:,my_randperm(i_r));
+                    else
+                        v_size = size(t_source);
+                        m_value = zeros(v_size(1:2));
+                        m_realizationIndices = randi(...
+                            n_realizationsInDataset, v_size(1:2));
+                        v_indices = zeros(prod(v_size(1:2)),1);
+                        for i_i=1:prod(v_size(1:2))
+                            v_indices(i_i) = sub2ind(...
+                                [prod(v_size(1:2)), n_realizationsInDataset], ...
+                                i_i, m_realizationIndices(i_i));
+                        end
+                        m_value(:) = t_source(v_indices);
+                        
+                        my_str.(s_fieldName) = m_value;
                     end
-                    m_value(:) = t_source(v_indices);
-                    
-                    my_str.(s_fieldName) = m_value;
                     
                 end 
                 str_oneRealization(i_r) = my_str;
