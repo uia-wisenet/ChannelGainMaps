@@ -473,6 +473,108 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             F = GFigure.captureCurrentFigure;
 
         end
+        function F = experiment_1099(obj, niter)
+            % This experiment function creates a dataset to be used in
+            % experiment_2080, 
+            % new environment with 7 walls, and half of the map has free-
+            % space propagation conditions.
+            % 10 Realizations to conform Monte Carlo runs
+                        
+            rng(1)
+            
+            s_fileName_environment = 'modelFiles/env3.mat';           
+            selectedWalls=1:7;
+                        
+            gridSize = [20 14];
+            
+            carrier_frequency = 800e6;
+            receiverBandwidth = 20e6;
+            samplingPeriod = 1/receiverBandwidth;
+            maxSamplesPerPilot = 12;
+            
+            my_datasetGen = DatasetGenerator2;
+            my_datasetGen.b_syntheticLocEstimate = 0;
+            my_datasetGen.b_syntheticLocError = 1;
+            
+            generator_tmp = MultiWallChannelGainGenerator;
+            generator_tmp.f = carrier_frequency;
+            generator_tmp.sampling_period = samplingPeriod;
+            generator_tmp.maxSamplesPerPilot = maxSamplesPerPilot;
+            [my_datasetGen.generator, m_source_loc] = ...
+                baselineGenerator3(load(s_fileName_environment), ...
+                selectedWalls, generator_tmp);
+            my_datasetGen.generator.delay_estimation_offset = 2*rand;
+            
+            my_datasetGen.sampler = SpectrumMapSampler;
+            my_datasetGen.sampler.pilotNoiseSTD = 1e-5; % natural units
+            my_datasetGen.sampler.powerNoiseSTD = 2;    % dB
+            my_datasetGen.std_syntheticLocationNoise = 7;
+            my_datasetGen.snr_locErrors = 20;
+            my_datasetGen.sampler.maxSamplesPerPilot = maxSamplesPerPilot;
+
+            my_datasetGen.featureExtractor = FeatureExtractor;
+            my_datasetGen.featureExtractor.sampling_period = samplingPeriod;
+            
+            my_datasetGen.locEstimator = ARSRobustLocationEstimator;
+            my_datasetGen.locEstimator.param_rho = 8;
+            my_datasetGen.locEstimator.b_inParallel = 0;
+            my_datasetGen.locEstimator.Xenb = m_source_loc;
+            
+            % define grid:
+            x1 = my_datasetGen.generator.boundary(1,1);
+            x2 = my_datasetGen.generator.boundary(1,2);
+            y1 = my_datasetGen.generator.boundary(2,1);
+            y2 = my_datasetGen.generator.boundary(2,2);
+            [m_grid_x, m_grid_y] = ndgrid(...
+                linspace(x1, x2, gridSize(1)), ...
+                linspace(y1, y2, gridSize(2)));
+            
+            m_locations = cat(2, m_grid_x(:), m_grid_y(:));
+            n_l = numel(m_grid_x);
+            m_allPairs  = combnk(1:n_l, 2);
+            n_allPairs = size(m_allPairs, 1);
+            
+            % for the training set:
+            n_trainSamples = 3000;
+            m_pairsTrain = m_allPairs(...
+                randperm(n_allPairs, n_trainSamples),:);
+
+%             % for the animation:
+%             an = Animator;
+%             an.t_grid_xy = cat(3, m_grid_x, m_grid_y);
+%             v_rows_frame = 1:2:gridSize(1);
+%             an.v_indicesTxPosition = sub2ind(size(m_grid_x), ...
+%                 v_rows_frame, ...
+%                 floor(gridSize(2)/2)*ones(1, length(v_rows_frame)));
+%             an.generator = my_datasetGen.generator;
+%             m_pairsMap = an.m_pairs();
+%              
+%             m_pairsGen = [m_pairsMap; m_pairsTrain];
+%             v_indicesMap = 1:size(m_pairsMap,1);
+%             v_indicesTrain = (size(m_pairsMap,1)+1):size(m_pairsGen,1);
+            
+            
+            my_datasetGen.n_realizations = 30;
+            my_datasetGen.b_inParallel = 1;
+            % the Mambo line:
+            str_dataset = my_datasetGen.generate(m_locations, m_pairsTrain);
+            %M = an.create(repmat(str_dataset.v_channelGains, [1 3]));           
+            
+            F = [];
+            str_dataset.datasetGen = my_datasetGen;
+            str_dataset.m_grid_x   = m_grid_x;
+            str_dataset.m_grid_y   = m_grid_y;
+%             str_dataset.v_indicesMap   = v_indicesMap;
+%             str_dataset.v_indicesTrain = v_indicesTrain;
+%             str_dataset.animator   = an;
+            
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
+%             
+%             figure(999); 
+%             my_datasetGen.generator.plot_environment;
+%             F = GFigure.captureCurrentFigure;
+
+        end
         function F = experiment_1095(obj, niter)
             % This experiment function creates a dataset to be used in
             % experiment_2095, 
@@ -1614,6 +1716,158 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             
         end
 
+        function F = experiment_2098(obj, niter)
+            %just a toy-size version of 2099
+            
+            
+            str_dataset = load ('datasets/dataset_ChannelGain_1080');
+            % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
+            
+            mySim = Simulator4;
+            mySim.b_augmentTraining = 1;
+            
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_cvLambdas_hybrid = 0;
+            
+            mySim.locFreeEstimator = LocationFreeEstimator;
+%             mySim.locFreeEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLF^2));
+%             mySim.locFreeEstimator.regularizationParameter = lambdaLF;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            mySim.v_lambdas_toTryLF = logspace(-4, -2, 10 );   % 4e-4; % 
+            mySim.v_sigmas_toTryLF  = linspace(50, 130, 10);   % 67;   %
+            
+            mySim.v_lambdas_toTryLB = logspace(-4, -2,  10);   % 4e-4; %   
+            mySim.v_sigmas_toTryLB  = linspace(20, 40, 10);    % 25;   %
+                
+            mySim.locBasedEstimator = LocationBasedEstimator;
+            %mySim.locEstimator = WangLocationEstimator;
+%             mySim.locBasedEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
+%             mySim.locBasedEstimator.regularizationParameter = lambdaLB;
+            %mySim.locBasedEstimator.Xenb = m_source_loc;
+                        
+            mySim.hybridEstimator = HybridEstimator2;
+            mySim.hybridEstimator.b_debugPlots = 0;
+            mySim.hybridEstimator.max_itrs_alternating = 40;
+            mySim.hybridEstimator.b_tryToBalance = 1;
+%             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+%             mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
+%             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
+%             mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
+
+%             n_allPairs = size(str_dataset.m_pairs, 1);
+%             v_trainTestPairs = randperm(n_allPairs, 120)';
+%             v_trainPairs = v_trainTestPairs(1:100);
+%             v_testPairs  = v_trainTestPairs(101:120);
+            
+            mySim.b_inParallel = 1;
+            mySim.n_monteCarloRuns = 2; %!30
+            v_nTrains = [300 200]; %!2000:-300:200;
+            %train_test_proportion = 4;
+            n_test = 1000;
+            for i_nTrain = length(v_nTrains):-1:1
+                mySim.n_train = v_nTrains(i_nTrain);
+                %mySim.n_test  = v_nTrains(i_nTrain)*train_test_proportion;
+                mySim.n_test = n_test;
+                str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
+            end
+            
+            tb_NMSE = struct2table(str_NMSE);
+            varNames = tb_NMSE.Properties.VariableNames;
+            ch_expNum = whichExp;
+
+            save (['savedResults' filesep 'results_' ch_expNum]);
+
+            F = GFigure;
+            F.m_X = v_nTrains;
+            F.m_Y = tb_NMSE.Variables';
+            F.ch_interpreter = 'none';
+            F.c_legend = varNames;
+            F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
+            F.ch_xlabel = 'Number of training samples';
+            F.ch_ylabel = 'NMSE';
+            F.figureNumber = str2num(ch_expNum);
+
+            
+        end
+        function F = experiment_2099(obj, niter)
+            % Same as 2070, but with dataset generated in 1080
+            str_dataset = load ('datasets/dataset_ChannelGain_1099');
+            % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
+            
+            mySim = Simulator4;
+            mySim.b_augmentTraining = 1;
+            
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_cvLambdas_hybrid = 0;
+            
+            mySim.locFreeEstimator = LocationFreeEstimator;
+%             mySim.locFreeEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLF^2));
+%             mySim.locFreeEstimator.regularizationParameter = lambdaLF;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            mySim.v_lambdas_toTryLF = logspace(-4, -2, 10 );   % 4e-4; % 
+            mySim.v_sigmas_toTryLF  = linspace(50, 130, 10);   % 67;   %
+            
+            mySim.v_lambdas_toTryLB = logspace(-4, -2,  10);   % 4e-4; %   
+            mySim.v_sigmas_toTryLB  = linspace(20, 40, 10);    % 25;   %
+                
+            mySim.locBasedEstimator = LocationBasedEstimator;
+            %mySim.locEstimator = WangLocationEstimator;
+%             mySim.locBasedEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
+%             mySim.locBasedEstimator.regularizationParameter = lambdaLB;
+            %mySim.locBasedEstimator.Xenb = m_source_loc;
+                        
+            mySim.hybridEstimator = HybridEstimator2;
+            mySim.hybridEstimator.b_debugPlots = 0;
+            mySim.hybridEstimator.max_itrs_alternating = 40;
+            mySim.hybridEstimator.b_tryToBalance = 1;
+%             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+%             mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
+%             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
+%             mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
+
+%             n_allPairs = size(str_dataset.m_pairs, 1);
+%             v_trainTestPairs = randperm(n_allPairs, 120)';
+%             v_trainPairs = v_trainTestPairs(1:100);
+%             v_testPairs  = v_trainTestPairs(101:120);
+            
+            mySim.b_inParallel = 1;
+            mySim.n_monteCarloRuns = 30;
+            v_nTrains = 2000:-300:200;
+            %train_test_proportion = 4;
+            n_test = 1000;
+            for i_nTrain = length(v_nTrains):-1:1
+                mySim.n_train = v_nTrains(i_nTrain);
+                %mySim.n_test  = v_nTrains(i_nTrain)*train_test_proportion;
+                mySim.n_test = n_test;
+                str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
+            end
+            
+            tb_NMSE = struct2table(str_NMSE);
+            varNames = tb_NMSE.Properties.VariableNames;
+            ch_expNum = whichExp;
+
+            save (['savedResults' filesep 'results_' ch_expNum]);
+
+            F = GFigure;
+            F.m_X = v_nTrains;
+            F.m_Y = tb_NMSE.Variables';
+            F.ch_interpreter = 'none';
+            F.c_legend = varNames;
+            F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
+            F.ch_xlabel = 'Number of training samples';
+            F.ch_ylabel = 'NMSE';
+            F.figureNumber = str2num(ch_expNum);
+
+            
+        end
         function F = experiment_2095(obj, niter)
             str_dataset = load ('datasets/dataset_ChannelGain_1095');
             % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
