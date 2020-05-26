@@ -75,7 +75,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.m_grid_x   = m_grid_x;
             str_dataset.m_grid_y   = m_grid_y;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
             
             figure(999); 
             my_datasetGen.generator.plot_environment;
@@ -172,7 +172,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.v_indicesTrain = v_indicesTrain;
             str_dataset.animator   = an;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -363,7 +363,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.animator   = an;
                         
             %%%
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -466,7 +466,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -568,7 +568,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.v_indicesTrain = v_indicesTrain;
             str_dataset.animator   = an;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -670,7 +670,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.v_indicesTrain = v_indicesTrain;
             str_dataset.animator   = an;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -773,7 +773,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -872,7 +872,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
             
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 
         end
 
@@ -968,7 +968,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.animator   = an;
             
 
-            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain_' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
