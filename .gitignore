@@ -1,1 +1,5 @@
 gsim.m
+*.avi
+savedResults/
+moreFigures/
+Experiments/*_data
