@@ -75,10 +75,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.m_grid_x   = m_grid_x;
             str_dataset.m_grid_y   = m_grid_y;
             
-            filename = 'dataset_ChannelGain_1010';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
             
             figure(999); 
             my_datasetGen.generator.plot_environment;
@@ -175,10 +172,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.v_indicesTrain = v_indicesTrain;
             str_dataset.animator   = an;
             
-            filename = 'dataset_ChannelGain_1030';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -288,7 +282,6 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             % Monte Carlo realizations
                         
             rng(1)
-            
             s_fileName_environment = 'modelFiles/env1.mat';           
             selectedWalls=2:5;
                         
@@ -368,11 +361,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesMap   = v_indicesMap;
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
-            
-            filename = 'dataset_ChannelGain_1060';
-            
+                        
             %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -475,10 +466,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
             
-            filename = 'dataset_ChannelGain_1080';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -580,10 +568,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.v_indicesTrain = v_indicesTrain;
             str_dataset.animator   = an;
             
-            filename = 'dataset_ChannelGain_1095';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -685,10 +670,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             str_dataset.v_indicesTrain = v_indicesTrain;
             str_dataset.animator   = an;
             
-            filename = 'dataset_ChannelGain_1100';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -791,10 +773,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
             
-            filename = 'dataset_ChannelGain_1110';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -893,14 +872,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.v_indicesTrain = v_indicesTrain;
 %             str_dataset.animator   = an;
             
-            filename = 'dataset_ChannelGain_1119';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
-%             
-%             figure(999); 
-%             my_datasetGen.generator.plot_environment;
-%             F = GFigure.captureCurrentFigure;
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 
         end
 
@@ -996,10 +968,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             str_dataset.animator   = an;
             
 
-            filename = 'dataset_ChannelGain_1129';
-            
-            %%%
-            save (['datasets' filesep filename], '-struct', 'str_dataset');
+            save (['datasets' filesep 'dataset_ChannelGain' whichExp], '-struct', 'str_dataset');
 %             
 %             figure(999); 
 %             my_datasetGen.generator.plot_environment;
@@ -1052,6 +1021,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             [str_NMSE, str_mapEstimates, trueGains] = mySim.simulate(...
                 str_dataset, v_trainPairs, v_testPairs);
             str_NMSE
+            
+            save (['savedResults' filesep 'results_' whichExp]);
+
             F = GFigure.captureCurrentFigure();
 
         end
@@ -1106,7 +1078,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             M = str_dataset.animator.create( [str_mapEstimates.locFree'...
                  str_mapEstimates.locBased' trueGains(:)])
              
-            save 
+            save (['savedResults' filesep 'results_' whichExp]);
             
             F = GFigure.captureCurrentFigure();
 
@@ -1180,7 +1152,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                  ["locFree", "locBased", "true";
                  "locFreeH", "locBasedH", "hybrid"]);
              
-            save results_2040
+            save (['savedResults' filesep 'results_' whichExp]);
             
             F = GFigure.captureCurrentFigure();
 
@@ -1255,7 +1227,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                  ["locFree", "locBased", "true";
                  "locFreeH", "locBasedH", "hybrid"]);
              
-            save results_2050
+            save (['savedResults' filesep 'results_' whichExp]);
             
             F = GFigure.captureCurrentFigure();
 
@@ -1330,7 +1302,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                  str_mapEstimates.hybrid(:) ], ...
                  ms_titles);
              
-            save results_2055
+            save (['savedResults' filesep 'results_' whichExp]);
             
             figure;
             vs_titles = ["locFree", "locBased", ...
@@ -1348,7 +1320,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 
         end
 
-        % Monte Carlo simulatinos
+        % Monte Carlo simulations
         function F = experiment_2060(obj, niter)
             str_dataset = load ('datasets/dataset_ChannelGain_1060');
             % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
@@ -1403,9 +1375,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             end
             
             tb_NMSE = struct2table(str_NMSE);
-            varNames = t_NMSE.Properties.VariableNames;
-
-            save results_2060
+            varNames = tb_NMSE.Properties.VariableNames;
+            ch_expNum = whichExp;
+            save (['savedResults' filesep 'results_' ch_expNum]);
 
             F = GFigure;
             F.m_X = v_nTrains;
@@ -1415,6 +1387,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
+            F.figureNumber = str2num(ch_expNum);
             
             keyboard
         end
@@ -1476,8 +1449,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             
             tb_NMSE = struct2table(str_NMSE);
             varNames = tb_NMSE.Properties.VariableNames;
-
-            save results_2070
+                        
+            ch_expNum = whichExp;
+            save (['savedResults' filesep 'results_' ch_expNum]);
 
             F = GFigure;
             F.m_X = v_nTrains;
@@ -1487,6 +1461,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
+            F.figureNumber = str2num(ch_expNum);
             
         end
         
@@ -1548,8 +1523,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             
             tb_NMSE = struct2table(str_NMSE);
             varNames = tb_NMSE.Properties.VariableNames;
+            ch_expNum = whichExp;
 
-            save results_2080
+            save (['savedResults' filesep 'results_' whichExp]);
 
             F = GFigure;
             F.m_X = v_nTrains;
@@ -1559,8 +1535,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
+            F.figureNumber = str2num(ch_expNum);
             
-            keyboard
         end
         
         function F = experiment_2090(obj, niter)
@@ -1621,8 +1597,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             
             tb_NMSE = struct2table(str_NMSE);
             varNames = tb_NMSE.Properties.VariableNames;
+            ch_expNum = whichExp;
 
-            save results_2090
+            save (['savedResults' filesep 'results_' ch_expNum]);
 
             F = GFigure;
             F.m_X = v_nTrains;
@@ -1632,8 +1609,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
+            F.figureNumber = str2num(ch_expNum);
+
             
-            keyboard
         end
 
         function F = experiment_2095(obj, niter)
@@ -1724,16 +1702,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                  str_mapEstimates.hybrid(:) ], ...
                  ms_titles);
 
-            save results_2095
-
-%             F = GFigure;
-%             F.m_X = v_nTrains;
-%             F.m_Y = tb_NMSE.Variables';
-%             F.ch_interpreter = 'none';
-%             F.c_legend = varNames;
-%             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
-%             F.ch_xlabel = 'Number of training samples';
-%             F.ch_ylabel = 'NMSE';
+            ch_expNum = whichExp;
+            save (['savedResults' filesep 'results_' ch_expNum]);
             
             F = [];
         end
@@ -1826,16 +1796,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                  str_mapEstimates.hybrid(:) ], ...
                  ms_titles);
 
-            save results_2100
+            ch_expNum = whichExp;
 
-%             F = GFigure;
-%             F.m_X = v_nTrains;
-%             F.m_Y = tb_NMSE.Variables';
-%             F.ch_interpreter = 'none';
-%             F.c_legend = varNames;
-%             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
-%             F.ch_xlabel = 'Number of training samples';
-%             F.ch_ylabel = 'NMSE';
+            save (['savedResults' filesep 'results_' ch_expNum]);
             
             F = [];
         end
@@ -1904,7 +1867,9 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             tb_NMSE = struct2table(str_NMSE);
             varNames = tb_NMSE.Properties.VariableNames;
 
-            save results_2110
+            ch_expNum = whichExp;
+
+            save (['savedResults' filesep 'results_' ch_expNum]);
 
             F = GFigure;
             F.m_X = v_nTrains;
@@ -1914,7 +1879,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
-            F.figureNumber = 2110;
+            F.figureNumber = str2num(ch_expNum);
         end
         
         
@@ -1951,6 +1916,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                 
             F = GFigure.captureCurrentFigure();
         end
+        
         function F = experiment_3129(obj, niter)
             load datasets/dataset_ChannelGain_1119.mat ...
                 m_grid_x m_grid_y am_estimatedLocations m_locations datasetGen
@@ -1981,6 +1947,90 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
                 datasetGen.generator.plot_environment()
                 
             F = GFigure.captureCurrentFigure();
+        end
+
+        %% Experiments with HybridEstimator3
+        function F = experiment_4010(obj, niter)
+
+            str_dataset = load ('datasets/dataset_ChannelGain_1110');
+            % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
+            
+            mySim = Simulator4;
+            mySim.n_monteCarloRuns = 1; %!
+            mySim.b_augmentTraining = 1;
+            
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_cvLambdas_hybrid = 0;
+            mySim.b_cv_inParallel = 1;
+            
+            mySim.locFreeEstimator = LocationFreeEstimator;
+%             mySim.locFreeEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLF^2));
+%             mySim.locFreeEstimator.regularizationParameter = lambdaLF;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            mySim.v_lambdas_toTryLF = logspace(-4, -2, 10 );   % 4e-4; % 
+            mySim.v_sigmas_toTryLF  = linspace(50, 130, 10);   % 67;   %
+            
+            mySim.v_lambdas_toTryLB = logspace(-4, -2,  10);   % 4e-4; %   
+            mySim.v_sigmas_toTryLB  = linspace(20, 40, 10);    % 25;   %
+                
+            mySim.locBasedEstimator = LocationBasedEstimator;
+            %mySim.locEstimator = WangLocationEstimator;
+%             mySim.locBasedEstimator.kernel = @(x, y) ...
+%                 exp(-norms(x-y, 2, 1).^2/(kernelSigmaLB^2));
+%             mySim.locBasedEstimator.regularizationParameter = lambdaLB;
+            %mySim.locBasedEstimator.Xenb = m_source_loc;
+                        
+            mySim.hybridEstimator = HybridEstimator3; % interpolates the gating function with a monotone kernel
+            mySim.hybridEstimator.b_debugPlots = 1;
+            mySim.hybridEstimator.max_itrs_alternating = 40;
+            mySim.hybridEstimator.b_tryToBalance = 1;
+%             mySim.hybridEstimator.h_kernelLF = mySim.locFreeEstimator.kernel;
+%             mySim.hybridEstimator.h_kernelLB = mySim.locBasedEstimator.kernel;
+%             mySim.hybridEstimator.regularizationParameterLF =lambdaLF;
+%             mySim.hybridEstimator.regularizationParameterLB =lambdaLB;
+            mySim.hybridEstimator.method_fit_D = 'kernel';
+            nu = 5;
+            %mySim.hybridEstimator.kernelPar_G = nu: 
+            mySim.hybridEstimator.h_kernelG = @(x, y) ...
+                (1-tanh((x(1,:)-y(1,:))/nu)).*(1-tanh((x(2,:)-y(2,:))/nu))/4;
+            mySim.hybridEstimator.regularizationParameterG = 1e-3;
+
+%             n_allPairs = size(str_dataset.m_pairs, 1);
+%             v_trainTestPairs = randperm(n_allPairs, 120)';
+%             v_trainPairs = v_trainTestPairs(1:100);
+%             v_testPairs  = v_trainTestPairs(101:120);
+            
+            mySim.b_inParallel = 0;
+            v_nTrains = [30 60]; %! 2000:-300:200;
+            %train_test_proportion = 4;
+            n_test = 100; %! 1000
+            for i_nTrain = length(v_nTrains):-1:1
+                mySim.n_train = v_nTrains(i_nTrain);
+                disp ("starting simulation with nTrain = " + ...
+                    string(mySim.n_train))
+                %mySim.n_test  = v_nTrains(i_nTrain)*train_test_proportion;
+                mySim.n_test = n_test;
+                str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
+                save results_2110_partial
+            end
+            
+            tb_NMSE = struct2table(str_NMSE);
+            varNames = tb_NMSE.Properties.VariableNames;
+
+            save results_4010
+
+            F = GFigure;
+            F.m_X = v_nTrains;
+            F.m_Y = tb_NMSE.Variables';
+            F.ch_interpreter = 'none';
+            F.c_legend = varNames;
+            F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
+            F.ch_xlabel = 'Number of training samples';
+            F.ch_ylabel = 'NMSE';
+            F.figureNumber = 4010;
         end
 
     end
