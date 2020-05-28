@@ -2408,7 +2408,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             mySim.hybridEstimator.max_itrs_alternating = 40;
             mySim.hybridEstimator.b_tryToBalance = 1;
             
-            mySim.b_inParallel = 1;
+            mySim.b_cv_inParallel = 1;
+            mySim.b_inParallel = 0;
             
             v_trainPairs = str_dataset.v_indicesTrain(:);
             v_mapPairs   = str_dataset.v_indicesMap(:);
@@ -2416,6 +2417,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             [str_NMSE, str_mapEstimates, trueGains] = mySim.simulateOne(...
                 str_dataset, v_trainPairs, v_mapPairs);
             
+            save (['savedResults' filesep 'results_' ch_expNum]);
+           
             figure;
             vs_titles = ["locFree", "locBased", ...
                  "locFreeH", "locBasedH", "hybrid", "true"];
