@@ -2411,12 +2411,12 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             mySim.b_cv_inParallel = 1;
             mySim.b_inParallel = 0;
             
-            v_trainPairs = str_dataset.v_indicesTrain(:);
+            v_trainPairs = str_dataset.v_indicesTrain(1:100);
             v_mapPairs   = str_dataset.v_indicesMap(:);
             
             [str_NMSE, str_mapEstimates, trueGains] = mySim.simulateOne(...
                 str_dataset, v_trainPairs, v_mapPairs);
-            
+            ch_expNum = whichExp;
             save (['savedResults' filesep 'results_' ch_expNum]);
            
             figure;
