@@ -2411,7 +2411,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             mySim.b_cv_inParallel = 1;
             mySim.b_inParallel = 0;
             
-            v_trainPairs = vec(str_dataset.v_indicesTrain));
+            v_trainPairs = vec(str_dataset.v_indicesTrain);
             v_mapPairs   = str_dataset.v_indicesMap(:);
             
             [str_NMSE, str_mapEstimates, trueGains] = mySim.simulateOne(...
