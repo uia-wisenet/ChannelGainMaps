@@ -7,6 +7,29 @@ classdef Simulator4 < Simulator3
     end
     
     methods
+        function [str_NMSE, str_mapEstimates, v_channelGains_test] = ...
+                simulateOne( obj, str_datasetOneOrMultipleR_in, v_train_pairs_in, v_test_pairs_in)
+            str_m = str_datasetOneOrMultipleR_in;
+            s_broadCastFields = ["m_locations", "m_pairs", "v_trueGains", ...
+                "datasetGen", "m_grid_x", "m_grid_y"];
+            s_stochasticFields = ["m_features_LF", "v_noisy_channelGains", ...
+                "m_estimatedLocations", "v_locUncertainties"];
+            
+            my_str = struct;
+            for i_name = 1:length(s_broadCastFields)
+                s_fieldName = s_broadCastFields(i_name);
+                my_str.(s_fieldName) = str_m.(s_fieldName);
+            end
+            for i_name = 1:length(s_stochasticFields)
+                s_fieldName = s_stochasticFields(i_name);
+                t_source = str_m.("a"+s_fieldName);
+                my_str.(s_fieldName) = t_source(:,:,1);
+            end
+            [str_NMSE, str_mapEstimates, v_channelGains_test] = ...
+                obj.simulate(my_str, v_train_pairs_in, v_test_pairs_in);
+        end
+        
+        end
         function str_NMSE = ...
                 simulateMonteCarlo ( obj, str_datasetMultipleRealizations_in)
             str_m = str_datasetMultipleRealizations_in;
