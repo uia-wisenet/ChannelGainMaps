@@ -2413,7 +2413,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             v_trainPairs = str_dataset.v_indicesTrain(:);
             v_mapPairs   = str_dataset.v_indicesMap(:);
             
-            [str_NMSE, str_mapEstimates, trueGains] = mySim.simulate(...
+            [str_NMSE, str_mapEstimates, trueGains] = mySim.simulateOne(...
                 str_dataset, v_trainPairs, v_mapPairs);
             
             figure;
