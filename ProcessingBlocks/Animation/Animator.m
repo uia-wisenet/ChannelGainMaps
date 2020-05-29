@@ -14,7 +14,7 @@ classdef Animator
     methods
         
         function playMovie(obj, M)
-            cf = figure(gcf); % to make the figure visibleclf;
+            cf = figure(gcf); % to make the figure visible;
             v_currentPosition = get(cf, 'Position');
             v_moviePosition = v_currentPosition;
             v_moviePosition(3:4) = obj.v_figurePosition(3:4) - obj.v_figurePosition(1:2);
@@ -49,13 +49,13 @@ classdef Animator
                     axis off;
                     imagesc(v_grid_x, v_grid_y, t_gains(:,:,i_row, i_col)');
                     hold on
-                    plot(v_xy_tx(1), v_xy_tx(2), 'xk');
                     xlabel x; ylabel y
                     if not(isempty(obj.generator))
                         obj.generator.plot_walls(obj.c_plotWall_options{:});
                         obj.generator.plot_sources(obj.c_plotSource_options{:});
                         obj.generator.set_lims_to_plot();
                     end
+                    plot(v_xy_tx(1), v_xy_tx(2), obj.c_plotTransmitter_options{:});
                     try
                         caxis(obj.v_colorAxis);
                     catch ME
@@ -100,12 +100,12 @@ classdef Animator
                     axis equal; axis tight
                     xlabel x, ylabel y
                     hold on
-                    plot(v_xy_tx(1), v_xy_tx(2), obj.c_plotTransmitter_options{:});
                     if not(isempty(obj.generator))
                         obj.generator.plot_walls(obj.c_plotWall_options{:});
                         obj.generator.plot_sources(obj.c_plotSource_options{:});
                         obj.generator.set_lims_to_plot();
                     end
+                    plot(v_xy_tx(1), v_xy_tx(2), obj.c_plotTransmitter_options{:});
                     try
                         caxis(obj.v_colorAxis);
                     catch ME
