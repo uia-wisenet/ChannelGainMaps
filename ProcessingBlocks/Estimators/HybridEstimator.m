@@ -25,8 +25,9 @@ classdef HybridEstimator < Estimator
                 m_locErrors, v_channelForPairs)
             % Train hybrid Channel-gain estimator.
             
-            % GIVEN:    locF features, estimated locations, and channel
-            %           gains
+            % Problem statement:
+            % GIVEN:    locF features, estimated locations, uncertainty
+            %           measures, and channel gain observations
             % OPTIMIZE: the coefficients of the kernel machines used by the
             %           hybrid estimator of the channel gain (as a linear 
             %           combination of the outputs of the latter machines)
