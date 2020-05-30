@@ -2493,7 +2493,7 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             mySim.hybridEstimator.b_tryToBalance = 1;
             
             mySim.b_cv_inParallel = 1;
-            mySim.b_inParallel = 0;
+            mySim.b_inParallel = 1;
             
             mySim.n_monteCarloRuns = 15;
             v_nTrains = 1700:-300:800;
