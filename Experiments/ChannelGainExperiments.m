@@ -2373,10 +2373,13 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.m_X = v_nTrains;
             F.m_Y = tb_NMSE.Variables';
             F.ch_interpreter = 'none';
-            F.c_legend = varNames;
+            F.c_legend = {'locF (step 1)', 'locB (step 2)', 'MoE (step 8)', ...
+                'MoE.locF ($\mathbf{f}_p$)', 'MoE.locB ($\mathbf{f}_l$)'};
             F.c_styles = {'-v', '-s', '-h', '--v', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
+            F.ch_legendPosition = 'NorthWest';
+            F.ch_interpreter = 'Latex';
             F.figureNumber = str2num(ch_expNum);
             
         end
@@ -2459,6 +2462,66 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
 %             F.ch_xlabel = 'Number of training samples';
 %             F.ch_ylabel = 'NMSE';
 %             F.figureNumber = str2num(ch_expNum);
+            
+        end
+
+        function F = experiment_2520(obj, niter) %also plots corrected MoE.LocB
+            
+            str_dataset = load ('datasets/dataset_ChannelGain_1510');
+            % m_source_loc = str_dataset.datasetGen.locEstimator.Xenb;
+            
+            mySim = Simulator4;
+            mySim.b_augmentTraining = 1;
+            
+            mySim.b_trainLocFree = 1;
+            mySim.b_trainLocBased = 1;
+            mySim.b_trainHybrid = 1;
+            mySim.b_cvLambdas_hybrid = 0;
+            
+            mySim.locFreeEstimator = LocationFreeEstimator;
+            mySim.locFreeEstimator.enableMissingData = 0;
+            mySim.v_lambdas_toTryLF = logspace(-4, -2, 10 );   % 4e-4; % 
+            mySim.v_sigmas_toTryLF  = linspace(50, 130, 10);   % 67;   %
+            
+            mySim.locBasedEstimator = LocationBasedEstimator;            
+            mySim.v_lambdas_toTryLB = logspace(-4, -2,  10);   % 4e-4; %   
+            mySim.v_sigmas_toTryLB  = linspace(20, 40, 10);    % 25;   %
+                                        
+            mySim.hybridEstimator = HybridEstimator2;
+            mySim.hybridEstimator.b_debugPlots = 0;
+            mySim.hybridEstimator.max_itrs_alternating = 40;
+            mySim.hybridEstimator.b_tryToBalance = 1;
+            
+            mySim.b_cv_inParallel = 1;
+            mySim.b_inParallel = 0;
+            
+            mySim.n_monteCarloRuns = 15;
+            v_nTrains = 1700:-300:800;
+            n_test = 1000;
+            for i_nTrain = length(v_nTrains):-1:1
+                mySim.n_train = v_nTrains(i_nTrain);
+                mySim.n_test = n_test;
+                str_NMSE(i_nTrain) = mySim.simulateMonteCarlo(str_dataset);
+            end
+            
+            tb_NMSE = struct2table(str_NMSE);
+            varNames = tb_NMSE.Properties.VariableNames;
+            ch_expNum = whichExp;
+
+            save (['savedResults' filesep 'results_' ch_expNum]);
+
+            F = GFigure;
+            F.m_X = v_nTrains;
+            F.m_Y = tb_NMSE.Variables';
+            F.ch_interpreter = 'none';
+            F.c_legend = {'locF (step 1)', 'locB (step 2)', 'MoE (step 8)', ...
+                'MoE.locF ($\mathbf{f}_p$)', 'MoE.locB ($\mathbf{f}_l$)', 'MoE.locB CORRECTED'};
+            F.c_styles = {'-v', '-s', '-h', '--v', '--x', '--s'};
+            F.ch_xlabel = 'Number of training samples';
+            F.ch_ylabel = 'NMSE';
+            F.ch_legendPosition = 'NorthWest';
+            F.ch_interpreter = 'Latex';
+            F.figureNumber = str2num(ch_expNum);
             
         end
 
