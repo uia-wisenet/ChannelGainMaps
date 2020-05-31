@@ -1,15 +1,5 @@
 classdef ChannelGainExperiments < ExperimentFunctionSet
-    
-    properties
         
-        b_loadData = 0 % set this property to 1 if you want the experiment
-        % methods to load data from the savedResults folder.
-        
-        % You may define here constants that you will use in the
-        % experiments of this file
-        
-    end
-    
     methods
         %% These methods are meant to prepare datasets only        
         function F = experiment_1010(obj, niter)
@@ -2515,7 +2505,8 @@ classdef ChannelGainExperiments < ExperimentFunctionSet
             F.m_Y = tb_NMSE.Variables';
             F.ch_interpreter = 'none';
             F.c_legend = {'locF (step 1)', 'locB (step 2)', 'MoE (step 8)', ...
-                'MoE.locF ($\mathbf{f}_p$)', 'MoE.locB ($\mathbf{f}_l$)', 'MoE.locB CORRECTED'};
+                'MoE.locF ($\mathbf{f}_p$)', 'MoE.locB ($\mathbf{f}_l$)', ...
+                'MoE.locB CORRECTED'};
             F.c_styles = {'-v', '-s', '-h', '--v', '--x', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
