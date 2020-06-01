@@ -9,6 +9,7 @@ classdef Animator
         ch_colormap = 'copper'
         c_plotWall_options = {'Color', [0, 0.3, 0.1], 'LineWidth', 4}
         c_plotSource_options = {'pb', 'MarkerFaceColor', 'b', 'markersize', 4};
+        b_addColorbarInStoryboard = 1;
     end 
     
     methods
@@ -69,7 +70,7 @@ classdef Animator
             frame = getframe(h_f);
         end
         
-        function M = storyBoard(obj, m_gains_in, s_titles, v_key_frames)
+        function [h_cb] = storyBoard(obj, m_gains_in, s_titles, v_key_frames)
             assert(isvector(s_titles));
             n_cols = length(s_titles);
             assert(isvector(v_key_frames));
@@ -93,8 +94,8 @@ classdef Animator
                     i_txPosition = obj.v_indicesTxPosition(i_frame);
                     v_xy_tx = [obj.t_grid_xy(i_txPosition), ...
                         obj.t_grid_xy(i_txPosition+obj.n_gridPoints())];
-                    subplot(n_rows, n_cols, ...
-                        sub2ind([n_cols n_rows], i_col, i_row))
+                    subplot(n_rows, n_cols+1, ...
+                        sub2ind([n_cols+1 n_rows], i_col, i_row))
                     imagesc(v_grid_x, v_grid_y, ...
                         t_gains(:,:,v_key_frames(i_row), i_col)');
                     axis equal; axis tight
@@ -117,6 +118,11 @@ classdef Animator
                     end
                 end
             end
+            subplot(1, n_cols+1, n_cols+1);
+            caxis(obj.v_colorAxis);
+            h_cb = colorbar('westOutside');
+            axis off
+
             colormap(obj.ch_colormap);
         end
         

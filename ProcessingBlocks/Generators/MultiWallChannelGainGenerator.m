@@ -110,7 +110,8 @@ classdef MultiWallChannelGainGenerator < ChannelGainGenerator
                     v_midpoint = (m_wall(1,:)+m_wall(2,:))/2;
                     plot(m_wall(:,1), m_wall(:,2), varargin{:});
                     hold on
-                    text(v_midpoint(1), v_midpoint(2), num2str(i_wall));
+                    % uncomment the following line to write wall numbers:
+                    % text(v_midpoint(1), v_midpoint(2), num2str(i_wall));
                 end
             end
         end
