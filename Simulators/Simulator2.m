@@ -1,4 +1,8 @@
 classdef Simulator2
+    % This class of simulator is used only in the experiments defined in
+    % LocFCartogrExperiments. In newer experiments, such as
+    % ChannelGainExperiments and GlobecomExperiments, Simulator3 (and its
+    % extension Simulator4) is used.
     properties
         generator MapGenerator = PrecomputedMapGenerator();
         locFreeEstimator LocationFreeEstimator

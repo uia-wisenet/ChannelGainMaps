@@ -1,4 +1,10 @@
 classdef Simulator3
+    % This class of simulator is used in ChannelGainExperiments, and
+    % GlobecomExperiments. Simulator4 is an extension containing the
+    % methods needed to perform averaging over several Monte Carlo
+    % realizations. An object of class Simulator4 is fully compatible with
+    % this class, all methods defined here will work for such an object.
+    
     properties
         locFreeEstimator LocationFreeEstimator
         locBasedEstimator LocationBasedEstimator
