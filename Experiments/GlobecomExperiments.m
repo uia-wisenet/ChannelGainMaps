@@ -103,12 +103,13 @@ classdef GlobecomExperiments < ExperimentFunctionSet
             str_dataAnimation.animator       = my_animator;
             
             save (['datasetsGlobecom' filesep 'dataset_animation'], ...
-                '-struct', 'str_dataset');
+                '-struct', 'str_dataAnimation');
             
             F = [];
         end
         
         function F = experiment_2010(obj, niter) % produces comparison plot
+            % figure 2
             str_dataset = load(['datasetsGlobecom' filesep ...
                 'dataset_30realizations']);
             
@@ -129,13 +130,14 @@ classdef GlobecomExperiments < ExperimentFunctionSet
 
             save (['savedResults' filesep 'results_' ch_expNum]);
             
+            tb_NMSE_toDraw = removevars(tb_NMSE, 'locBased_fromHybrid');
+            
             F = GFigure;
             F.m_X = v_nTrains;
-            F.m_Y = tb_NMSE.Variables';
+            F.m_Y = tb_NMSE_toDraw.Variables';
             F.ch_interpreter = 'none';
             F.c_legend = {'locF (step 1)', 'locB (step 2)', 'MoE (step 8)', ...
-                'MoE.locF ($\mathbf{f}_p$)', 'MoE.locB ($\mathbf{f}_l$)', ...
-                'MoE.locB CORRECTED'};
+                'MoE.locF ($\mathbf{f}_p$)', 'MoE.locB ($\mathbf{f}_l$)'};
             F.c_styles = {'-v', '-s', '-h', '--v', '--x', '--s'};
             F.ch_xlabel = 'Number of training samples';
             F.ch_ylabel = 'NMSE';
@@ -146,6 +148,7 @@ classdef GlobecomExperiments < ExperimentFunctionSet
         end
         
         function F = experiment_2020(obj, niter) % produces storyboard
+            % figure 1
             str_dataset = load(['datasetsGlobecom' filesep ...
                 'dataset_animation']);
             
@@ -162,25 +165,34 @@ classdef GlobecomExperiments < ExperimentFunctionSet
             
             ch_expNum = whichExp;
             save (['savedResults' filesep 'results_' ch_expNum]);
+            
+            str_dataset.animator.ch_colormap = 'jet';
+            str_dataset.animator.c_plotSource_options{1} = 'pk';
+            str_dataset.animator.c_plotSource_options{3} = 'r';
+            str_dataset.animator.c_plotSource_options{5} = 5;
 
             figure(999);
-            vs_titles = ["locFree", "locBased", ...
-                 "locFreeH", "locBasedH", "hybrid", "true"];
-            str_dataset.animator.storyBoard([...
+            vs_titles = ["locF", "locB", "MoE.locF", "MoE.locB", ...
+                 "MoE.locB(Corrected)", "MoE", "true"];
+            h_colorBar = str_dataset.animator.storyBoard([...
                  str_mapEstimates.locFree'...
                  str_mapEstimates.locBased' ...
                  str_mapEstimates.locFree_fromHybrid' ...
                  str_mapEstimates.locBased_fromHybrid' ...
+                 str_mapEstimates.locBased_fromHybrid_corrected' ...
                  str_mapEstimates.hybrid(:) ...
                  trueGains(:)], ...
-                 vec(vs_titles), 3:3:9);
-            
+                 vec(vs_titles), [2 5 9]);
+            h_colorBar.Position = [0.8333 0.1235 0.0119 0.7840];
+            h_colorBar.Limits = [-80 -40];
+
             F = GFigure.captureCurrentFigure();
         end
     end
     
     methods (Static)
-        function mySim = globecomSimulator()
+        %% constructs Simulator4 object to be used in exp 2010 and 2020
+        function mySim = globecomSimulator() 
             mySim = Simulator4;
             mySim.b_augmentTraining = 1;
             
@@ -208,9 +220,3 @@ classdef GlobecomExperiments < ExperimentFunctionSet
         end
     end
 end
-           
-
-        
-        
-        
-        
